@@ -35,10 +35,17 @@ Push this folder to a GitHub repo → import into Vercel as a static site
 
 Simple interest: `Principal × (monthly rate ÷ 100) × months`.
 - **Rate** is typed in manually per disbursement — it varies by customer, as you described.
-- **Months** are rounded **up** — any part of a month started counts as a full month (matches your 30-day sarafa convention). This lives in `js/interest.js` as `ROUND_MODE = "roundup"` — change it to `"exact"` there if you ever want daily pro-rating instead.
-- Each disbursement is calculated independently from its own date, then summed for the loan total — exactly as you described (per-disbursement + combined view).
+- **Months** are rounded **up** — any part of a month started counts as a full month, minimum 1 month (matches your 30-day sarafa convention). Kept for 1 day → charged 1 month. Kept for 45 days → charged 2 months. This lives in `js/interest.js` as `ROUND_MODE = "roundup"` — change it to `"exact"` there if you ever want daily pro-rating instead. The breakdown table shows the exact day count next to the months actually charged, so it's easy to check by hand.
+- Each disbursement is tracked independently, with its own rate and its own running principal — then summed for the combined loan total.
 
-**Known simplification (flagging honestly):** interest for each disbursement is currently calculated on its *original* amount from its date to today, and any principal repayments just reduce the outstanding balance shown — they don't yet re-run interest on a *reduced* principal for the period after a partial payment. For most day-to-day use (interest-only payments, or paying off the full balance) this is exactly right. If you regularly make partial principal payments mid-loan and expect interest to shift after that specific payment date, tell me and I'll add that refinement next.
+**Payment waterfall** — every payment (whatever type you label it) is applied automatically:
+1. It clears any interest owed first.
+2. Anything left over reduces the principal.
+3. From that point on, interest on the reduced principal is counted fresh from the **payment date** — shown in the breakdown as "Interest counted from." The **original disbursement date** is always kept too, so you can still see when the money first went out.
+
+If one payment is large enough to cover more than one disbursement, it settles the oldest disbursement first before moving to the next.
+
+The "Payment type" dropdown (interest / partial principal / full closure) is just a label for your own records — it doesn't change how the money is applied; the waterfall rule above always runs the same way.
 
 ## What's built (Phase 1 — core)
 
