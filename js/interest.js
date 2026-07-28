@@ -28,47 +28,109 @@ function monthsElapsed(fromDate, toDate, mode = ROUND_MODE) {
 }
 
 /**
- * Interest for a single disbursement, as of a given date.
- * @param {{amount:number, rate:number, date:any}} disb
- * @param {Date|string} asOfDate
- */
-function calcDisbursementInterest(disb, asOfDate = new Date()) {
-  const months = monthsElapsed(disb.date, asOfDate);
-  const days = daysBetween(disb.date, asOfDate);
-  const interest = round2((disb.amount || 0) * ((disb.rate || 0) / 100) * months);
-  return { days, months, rate: disb.rate, principal: disb.amount, interest };
-}
-
-/**
- * Full loan interest breakdown: per-disbursement + combined totals.
- * @param {Array} disbursements
- * @param {Array} payments - [{amount, type: 'interest'|'principal'|'full'}]
- * @param {Date} asOfDate
+ * PAYMENT WATERFALL (applies to every payment, regardless of the "type" label):
+ *   1. Payment first clears any interest owed.
+ *   2. Anything left over after interest reduces the principal.
+ *   3. From that moment, interest on the (now smaller) principal starts
+ *      counting fresh from the payment date — the "new date" — while the
+ *      original disbursement date is always kept for reference/history.
+ * Disbursements are settled oldest-first (FIFO) when one payment needs to
+ * cover more than one disbursement.
+ *
+ * Minimum charge: any part-month counts as a full month (see monthsElapsed).
+ * So a loan kept for 1 day still owes 1 month's interest; a loan kept for
+ * 45 days owes 2 months. The per-disbursement breakdown below shows the
+ * exact day count alongside the months actually charged, so it's easy to
+ * verify by hand.
  */
 function calcLoanSummary(disbursements, payments = [], asOfDate = new Date()) {
-  const perDisbursement = disbursements.map((d) => ({
-    ...d,
-    ...calcDisbursementInterest(d, asOfDate),
-  }));
+  // Running state per disbursement, oldest first.
+  const states = [...disbursements]
+    .sort((a, b) => toJsDate(a.date) - toJsDate(b.date))
+    .map((d) => ({
+      originalDate: d.date,
+      rate: d.rate,
+      originalAmount: d.amount,
+      principal: d.amount,
+      periodStart: toJsDate(d.date),
+      unpaidInterest: 0,
+    }));
+
+  const sortedPayments = [...payments].sort((a, b) => toJsDate(a.date) - toJsDate(b.date));
+
+  let interestPaidTotal = 0;
+  let principalPaidTotal = 0;
+
+  for (const p of sortedPayments) {
+    let remaining = Number(p.amount) || 0;
+    const pd = toJsDate(p.date);
+
+    for (const s of states) {
+      if (remaining <= 0) break;
+      if (s.principal <= 0 && s.unpaidInterest <= 0) continue; // already settled
+
+      const months = monthsElapsed(s.periodStart, pd);
+      const interestThisPeriod = round2(s.principal * (s.rate / 100) * months);
+      const totalDue = round2(s.unpaidInterest + interestThisPeriod);
+
+      if (remaining >= totalDue + s.principal) {
+        // fully settles this disbursement
+        interestPaidTotal += totalDue;
+        principalPaidTotal += s.principal;
+        remaining = round2(remaining - totalDue - s.principal);
+        s.principal = 0;
+        s.unpaidInterest = 0;
+        s.periodStart = pd;
+      } else if (remaining >= totalDue) {
+        const towardPrincipal = round2(remaining - totalDue);
+        interestPaidTotal += totalDue;
+        principalPaidTotal += towardPrincipal;
+        s.principal = round2(s.principal - towardPrincipal);
+        s.unpaidInterest = 0;
+        s.periodStart = pd;
+        remaining = 0;
+      } else {
+        interestPaidTotal += remaining;
+        s.unpaidInterest = round2(totalDue - remaining);
+        s.periodStart = pd; // clock still resets; the shortfall carries forward as unpaidInterest
+        remaining = 0;
+      }
+    }
+    // any leftover after all disbursements are settled is a credit — not tracked yet (edge case)
+  }
+
+  // Final open period, as of today (or asOfDate)
+  const perDisbursement = states.map((s) => {
+    const days = daysBetween(s.periodStart, asOfDate);
+    const months = monthsElapsed(s.periodStart, asOfDate);
+    const openInterest = round2(s.principal * (s.rate / 100) * months);
+    const interest = round2(s.unpaidInterest + openInterest);
+    return {
+      originalDate: s.originalDate,
+      effectiveDate: s.periodStart,
+      dateChanged: toJsDate(s.periodStart).getTime() !== toJsDate(s.originalDate).getTime(),
+      rate: s.rate,
+      originalAmount: s.originalAmount,
+      principal: s.principal,
+      days,
+      months,
+      interest,
+      settled: s.principal <= 0 && interest <= 0,
+    };
+  });
 
   const totalPrincipal = sum(disbursements.map((d) => d.amount));
-  const totalInterestAccrued = round2(sum(perDisbursement.map((d) => d.interest)));
-
-  const interestPaid = sum(payments.filter((p) => p.type === "interest").map((p) => p.amount));
-  const principalPaid = sum(payments.filter((p) => p.type === "principal" || p.type === "full").map((p) => p.amount));
-
-  const principalOutstanding = round2(totalPrincipal - principalPaid);
-  const interestOutstanding = round2(totalInterestAccrued - interestPaid);
+  const principalOutstanding = round2(sum(perDisbursement.map((d) => d.principal)));
+  const interestOutstanding = round2(sum(perDisbursement.map((d) => d.interest)));
   const totalPayableToday = round2(principalOutstanding + interestOutstanding);
 
   return {
     perDisbursement,
     totalPrincipal,
-    totalInterestAccrued,
-    interestPaid,
-    principalPaid,
     principalOutstanding,
     interestOutstanding,
+    interestPaid: round2(interestPaidTotal),
+    principalPaid: round2(principalPaidTotal),
     totalPayableToday,
   };
 }
