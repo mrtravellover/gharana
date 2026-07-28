@@ -1,9 +1,7 @@
-// Import the functions you need from the SDKs you need
-import { initializeApp } from "firebase/app";
-// TODO: Add SDKs for Firebase products that you want to use
-// https://firebase.google.com/docs/web/setup#available-libraries
-
-// Your web app's Firebase configuration
+// ============================================================
+// FIREBASE CONFIG — replace with YOUR project's keys
+// Firebase Console → Project Settings → General → Your apps → SDK config
+// ============================================================
 const firebaseConfig = {
   apiKey: "AIzaSyAW3lEiD77wsiNlKzOKzWNhfLY3O2OBB60",
   authDomain: "lending-project-e0d98.firebaseapp.com",
@@ -13,5 +11,12 @@ const firebaseConfig = {
   appId: "1:155955157465:web:44d3c3a5cb23be02d4e1c8"
 };
 
-// Initialize Firebase
-const app = initializeApp(firebaseConfig);
+firebase.initializeApp(firebaseConfig);
+const auth = firebase.auth();
+const db = firebase.firestore();
+const storage = firebase.storage();
+
+// Enable offline cache so the app keeps working with a weak connection
+db.enablePersistence({ synchronizeTabs: true }).catch((err) => {
+  console.warn("Offline persistence not enabled:", err.code);
+});
