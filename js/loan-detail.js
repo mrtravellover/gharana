@@ -26,6 +26,7 @@ async function loadAll() {
   disbursements = disbSnap.docs.map((d) => ({ id: d.id, ...d.data() }));
   payments = paySnap.docs.map((d) => ({ id: d.id, ...d.data() }));
 
+  document.getElementById("topCustomerLink").href = `customer-profile.html?id=${loanData.customerId}`;
   renderHeader();
   renderOrnaments();
   renderDisbursements();
@@ -73,12 +74,14 @@ function renderInterest() {
   const summary = calcLoanSummary(disbursements, payments);
   document.getElementById("interestBody").innerHTML = summary.perDisbursement.map((d) => `
     <tr>
-      <td class="mono">${fmtMoney(d.principal)}</td>
-      <td>${fmtDate(d.date)}</td>
+      <td>${fmtDate(d.originalDate)}${d.settled ? ` <span class="badge badge-closed">settled</span>` : ""}</td>
       <td>${d.rate}%</td>
-      <td>${d.months}</td>
+      <td class="mono">${fmtMoney(d.principal)} <span style="color:var(--ink-soft);font-size:12px;">of ${fmtMoney(d.originalAmount)}</span></td>
+      <td>${fmtDate(d.effectiveDate)}${d.dateChanged ? ` <span class="hint" style="display:inline;">(after payment)</span>` : ""}</td>
+      <td class="mono">${d.days}</td>
+      <td>${d.months} month${d.months === 1 ? "" : "s"}${d.days > 0 && d.days < 30 ? ` <span class="hint" style="display:inline;">(min.)</span>` : ""}</td>
       <td class="mono">${fmtMoney(d.interest)}</td>
-    </tr>`).join("") || `<tr><td colspan="5" style="color:var(--ink-soft);">No disbursements yet.</td></tr>`;
+    </tr>`).join("") || `<tr><td colspan="7" style="color:var(--ink-soft);">No disbursements yet.</td></tr>`;
 
   document.getElementById("sumPrincipal").textContent = fmtMoney(summary.principalOutstanding);
   document.getElementById("sumInterestAccrued").textContent = fmtMoney(summary.totalInterestAccrued);
