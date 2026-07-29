@@ -1,0 +1,9 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Only signed-in users (you + your father's accounts) can read/write.
+    match /{document=**} {
+      allow read, write: if request.auth != null;
+    }
+  }
+}
