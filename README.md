@@ -71,12 +71,20 @@ The "Payment type" dropdown (interest / partial principal / full closure) is jus
 - Customer add/search/profile
 - Loan creation with multiple ornaments (Gold/Silver, weight, qty, purity)
 - Silver Haali (<75 purity) / Paat (≥75) auto-category with manual override
-- **Ornament belongs to: Self or someone else** — when a relative's item is pledged under a customer's account (e.g. Ramesh's item under Suresh's account), pick "Someone else" and enter their name; it's recorded and shown everywhere as "Ramesh In Suresh's Account"
+- **Identity note per ornament** — each pledged item has its own note (e.g. "Blue pack, white bag, tag #3") instead of one note for the whole loan, so you can tell items apart in the locker. Click any item's note in the loan page to add or edit it.
+- **Ornament belongs to: Self or someone else** — when a relative's item is pledged under a customer's account (e.g. Ramesh's item under Suresh's account), pick "Someone else" and enter their name, mobile, Aadhaar, and address; it's recorded and shown everywhere as "Ramesh In Suresh's Account" along with those details
+- **Customer notes, editable anytime** — set at customer creation or edit later from the customer's profile page (e.g. "Ask customer to clear Shah Jewellers due")
+- **Camera capture, not file upload** — every photo field (customer photo, loan-time photo, disbursement photo, return photo) opens the phone's camera directly via the file input's "capture" attribute, instead of showing a gallery/file picker
+- **Photos at four points**: customer profile (with a "📷 Retake" option anytime), when a new loan is created, when a disbursement is made, and when jewellery is finally handed back (mandatory, closes the loan)
+- **Change interest rate mid-loan** — e.g. lent at 2%, but you want to charge 2.5% at collection. Each disbursement has a "Change rate →" button; interest already counted at the old rate is locked in, and only interest after your chosen effective date uses the new rate
+- **Simple or compounding interest** — pick per disbursement, changeable later from the same rate-change screen
+- **Release a single item mid-loan** — e.g. customer pledged 4 items for ₹1,00,000 and wants to take back just 1 by paying its share of interest + ₹25,000 principal. Each ornament row has a "Release item" button — enter what they paid, and it flows through the same interest-first waterfall; the loan stays active for the rest
 - Multiple disbursements per loan, each with its own date and rate
 - Per-disbursement + combined interest breakdown, with day count next to the minimum-month charge
 - Payment waterfall: interest first, then principal, with the interest clock resetting from the payment date
 - **Search by item name** — the Loans list and each customer's profile can be searched by ornament name (e.g. "chain", "kada"), not just loan number or customer name
 - Release workflow: Active → Ready to release → (photo capture) → Closed
+- **Dashboard "Ready to release" list** — loans that are financially cleared and waiting for physical return show up right on the dashboard with each pending item's identity note (e.g. "Kada: blue pack, white bag") so you know exactly which locker item to pull, without opening each loan
 - Dashboard with active loan count, principal outstanding, interest accrued, today's collections
 - **Reports** page — money in (collections), money out (disbursements), and interest earned, viewable month-by-month or year-by-year, each period's transactions listed with loan/customer detail, plus a compare chart across recent periods
 
