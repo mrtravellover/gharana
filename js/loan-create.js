@@ -10,13 +10,18 @@ requireAuth(async () => {
 
 function setupPledgedByField() {
   const nameInput = document.getElementById("pledgedByName");
+  const extraFields = document.getElementById("pledgedByExtra");
+  const addressField = document.getElementById("pledgedByAddressField");
   const hint = document.getElementById("pledgedByHint");
   const radios = document.querySelectorAll('input[name="pledgedByMode"]');
   const custSelect = document.getElementById("customerSelect");
 
   function update() {
     const mode = document.querySelector('input[name="pledgedByMode"]:checked').value;
-    nameInput.style.display = mode === "other" ? "" : "none";
+    const isOther = mode === "other";
+    nameInput.style.display = isOther ? "" : "none";
+    extraFields.style.display = isOther ? "" : "none";
+    addressField.style.display = isOther ? "" : "none";
     const custName = (custSelect.selectedOptions[0]?.textContent || "").split(" — ")[0] || "the account holder";
     if (mode === "self") {
       hint.textContent = `Will be recorded under: ${custName}`;
@@ -124,6 +129,9 @@ async function saveLoan(e) {
 
   const pledgedByMode = document.querySelector('input[name="pledgedByMode"]:checked').value;
   const pledgedByName = document.getElementById("pledgedByName").value.trim();
+  const pledgedByMobile = document.getElementById("pledgedByMobile").value.trim();
+  const pledgedByAadhaar = document.getElementById("pledgedByAadhaar").value.trim();
+  const pledgedByAddress = document.getElementById("pledgedByAddress").value.trim();
   const pledgedByLabel = pledgedByMode === "self"
     ? customerName
     : `${pledgedByName || "Unnamed"} In ${customerName}'s Account`;
@@ -134,6 +142,9 @@ async function saveLoan(e) {
     customerName,
     pledgedByMode,
     pledgedByName: pledgedByMode === "other" ? pledgedByName : "",
+    pledgedByMobile: pledgedByMode === "other" ? pledgedByMobile : "",
+    pledgedByAadhaar: pledgedByMode === "other" ? pledgedByAadhaar : "",
+    pledgedByAddress: pledgedByMode === "other" ? pledgedByAddress : "",
     pledgedByLabel,
     date: firebase.firestore.Timestamp.fromDate(new Date(document.getElementById("loanDate").value)),
     remarks: document.getElementById("loanRemarks").value.trim(),
