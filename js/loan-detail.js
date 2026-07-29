@@ -41,7 +41,15 @@ function renderHeader() {
       <div>
         <h2 class="mono">${escapeHtml(loanData.loanNumber)}</h2>
         <p><a href="customer-profile.html?id=${loanData.customerId}">${escapeHtml(loanData.customerName)}</a> · Loan date ${fmtDate(loanData.date)}</p>
-        ${loanData.pledgedByMode === "other" ? `<p style="color:var(--gold-deep);font-weight:600;font-size:13.5px;">Ornament belongs to: ${escapeHtml(loanData.pledgedByLabel)}</p>` : ""}
+        ${loanData.pledgedByMode === "other" ? `
+          <div style="background:var(--gold-soft);border-radius:8px;padding:10px 14px;margin-top:8px;">
+            <p style="color:var(--gold-deep);font-weight:600;font-size:13.5px;margin-bottom:4px;">Ornament belongs to: ${escapeHtml(loanData.pledgedByLabel)}</p>
+            <div style="font-size:13px;color:var(--ink-soft);display:flex;gap:16px;flex-wrap:wrap;">
+              ${loanData.pledgedByMobile ? `<span>📱 ${escapeHtml(loanData.pledgedByMobile)}</span>` : ""}
+              ${loanData.pledgedByAadhaar ? `<span>🪪 ${escapeHtml(loanData.pledgedByAadhaar)}</span>` : ""}
+              ${loanData.pledgedByAddress ? `<span>📍 ${escapeHtml(loanData.pledgedByAddress)}</span>` : ""}
+            </div>
+          </div>` : ""}
       </div>
       <span class="badge badge-${loanData.status}" style="font-size:13px;padding:5px 12px;">${loanData.status}</span>
     </div>
