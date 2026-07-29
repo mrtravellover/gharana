@@ -4,6 +4,8 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Loan Detail — Gharana Ledger</title>
+<link rel="icon" href="../favicon.svg" type="image/svg+xml">
+<meta name="theme-color" content="#2B241C">
 <link href="https://fonts.googleapis.com/css2?family=Fraunces:wght@500;600&family=Inter:wght@400;500;600;700&family=IBM+Plex+Mono:wght@500&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="../css/style.css">
 </head>
@@ -29,7 +31,7 @@
         Locker note: <span id="lockerNoteInline">—</span>
       </p>
       <table>
-        <thead><tr><th>Item</th><th>Metal</th><th>Wt (g)</th><th>Qty</th><th>Category</th><th>Status</th></tr></thead>
+        <thead><tr><th>Item</th><th>Metal</th><th>Wt (g)</th><th>Qty</th><th>Category</th><th>Status</th><th>Actions</th></tr></thead>
         <tbody id="ornamentBody"></tbody>
       </table>
     </div>
@@ -195,6 +197,35 @@
       <button type="button" class="btn btn-secondary btn-block" onclick="closeModal('releaseConfirmModal')">Cancel</button>
       <button type="button" class="btn btn-secondary btn-block" onclick="goRecordPaymentFirst()">Record payment first</button>
       <button type="button" class="btn btn-primary btn-block" onclick="confirmMoveToRelease()">Move to Ready to Release</button>
+    </div>
+  </div>
+</div>
+
+<!-- Edit Ornament Modal -->
+<div class="modal-overlay" id="editOrnamentModal" style="display:none;">
+  <div class="modal">
+    <h2>Edit item</h2>
+    <p style="color:var(--ink-soft);font-size:13.5px;">For corrections while the item is still kept — e.g. re-weighed, a typo in the name, or purity re-checked.</p>
+    <input type="hidden" id="editOrnId">
+    <div class="field"><label>Item name *</label><input type="text" id="editOrnName" required></div>
+    <div class="grid grid-2">
+      <div class="field">
+        <label>Metal *</label>
+        <select id="editOrnMetal">
+          <option value="Gold">Gold</option>
+          <option value="Silver">Silver</option>
+        </select>
+      </div>
+      <div class="field"><label>Weight (g) *</label><input type="number" id="editOrnWeight" min="0" step="0.01" required></div>
+    </div>
+    <div class="grid grid-2">
+      <div class="field"><label>Qty *</label><input type="number" id="editOrnQty" min="1" step="1" required></div>
+      <div class="field" id="editOrnPurityField"><label>Purity (silver only)</label><input type="number" id="editOrnPurity" min="0" max="100" step="0.1"></div>
+    </div>
+    <div class="field"><label>Reason for this change</label><textarea id="editOrnReason" placeholder="e.g. Re-weighed on shop scale, was recorded wrong earlier"></textarea></div>
+    <div style="display:flex;gap:10px;">
+      <button type="button" class="btn btn-secondary btn-block" onclick="closeModal('editOrnamentModal')">Cancel</button>
+      <button type="button" class="btn btn-primary btn-block" id="saveOrnEditBtn" onclick="saveOrnamentEdit()">Save changes</button>
     </div>
   </div>
 </div>
