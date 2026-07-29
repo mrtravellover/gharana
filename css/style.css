@@ -100,6 +100,14 @@ a{color:var(--gold-deep);}
 .content{padding:22px 24px 60px;max-width:1180px;}
 
 /* mobile bottom nav */
+.topbar-profile-btn{display:none;}
+@media (max-width:860px){
+  .topbar-profile-btn{
+    display:flex;align-items:center;justify-content:center;width:34px;height:34px;flex-shrink:0;
+    border-radius:50%;background:var(--paper-soft);color:var(--ink);text-decoration:none;
+  }
+}
+
 .mobile-nav{display:none;}
 @media (max-width:860px){
   .sidebar{display:none;}
