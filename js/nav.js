@@ -9,9 +9,11 @@ const NAV_ITEMS = [
   { key: "loans", href: "loans.html", label: "Loans", icon: "M12 2l3 7h7l-5.5 4.5L18 21l-6-4-6 4 1.5-7.5L2 9h7z" },
   { key: "loan-create", href: "loan-create.html", label: "New Loan", icon: "M12 5v14M5 12h14" },
   { key: "reports", href: "reports.html", label: "Reports", icon: "M3 3v18h18M8 17V9m5 8V5m5 12v-6" },
+  { key: "profile", href: "profile.html", label: "Profile", icon: "M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2M12 11a4 4 0 100-8 4 4 0 000 8z" },
 ];
 
 function renderShell({ active, title }) {
+  if (document.querySelector(".app-shell")) return; // already rendered — avoid duplicating on a later auth-state change
   const user = auth.currentUser;
   const shellHTML = `
   <div class="app-shell">
