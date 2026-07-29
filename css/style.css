@@ -29,10 +29,19 @@
 
 #stagedContent{display:none;}
 body.loading::after{
-  content:"Loading Gharana Ledger…";
+  content:"";
   position:fixed;inset:0;display:flex;align-items:center;justify-content:center;
-  background:var(--bg);color:var(--ink-soft);font-family:var(--font-body);font-size:14px;z-index:9999;
+  background:var(--bg);z-index:9999;
 }
+body.loading::before{
+  content:"";
+  position:fixed;top:50%;left:50%;width:34px;height:34px;margin:-17px 0 0 -17px;
+  border:3px solid var(--line);border-top-color:var(--gold-deep);border-radius:50%;
+  z-index:10000;animation:spin 0.8s linear infinite;
+}
+@keyframes spin{to{transform:rotate(360deg);}}
+.content{animation:fadeIn 0.25s ease;}
+@keyframes fadeIn{from{opacity:0;}to{opacity:1;}}
 
 #printReceiptArea{display:none;}
 @media print{
@@ -73,7 +82,7 @@ a{color:var(--gold-deep);}
 .sidebar .brand .sub{font-size:11px;color:#B8AF9E;letter-spacing:.04em;text-transform:uppercase;}
 .sidebar nav a{
   display:flex;align-items:center;gap:10px;padding:11px 20px;color:#D8D0BF;text-decoration:none;font-size:14px;
-  border-left:3px solid transparent;
+  border-left:3px solid transparent;transition:background 0.15s ease, color 0.15s ease, border-color 0.15s ease;
 }
 .sidebar nav a:hover{background:rgba(255,255,255,.06);color:#fff;}
 .sidebar nav a.active{background:rgba(166,117,44,.22);border-left-color:var(--gold);color:#fff;}
@@ -98,15 +107,29 @@ a{color:var(--gold-deep);}
     justify-content:space-around;padding:6px 0 max(6px, env(safe-area-inset-bottom));z-index:10;
     border-top:1px solid rgba(255,255,255,.08);
   }
-  .mobile-nav a{color:#B8AF9E;text-decoration:none;font-size:10.5px;text-align:center;display:flex;flex-direction:column;align-items:center;gap:2px;padding:4px 8px;}
+  .mobile-nav a{color:#B8AF9E;text-decoration:none;font-size:10.5px;text-align:center;display:flex;flex-direction:column;align-items:center;gap:2px;padding:4px 8px;transition:color 0.15s ease;}
   .mobile-nav a.active{color:var(--gold-soft);}
   .mobile-nav svg{width:20px;height:20px;}
   .content{padding:16px 14px 90px;}
   .topbar{padding:12px 16px;}
 }
 
+@media (max-width:860px){
+  .table-scroll{overflow-x:auto;-webkit-overflow-scrolling:touch;}
+  .table-scroll table{white-space:nowrap;}
+  input, select, textarea{font-size:16px;} /* prevents iOS Safari auto-zoom on focus */
+}
+@media (max-width:760px){
+  .modal{max-width:94vw !important;max-height:92vh;}
+  .search-bar{flex-direction:column;align-items:stretch;}
+  .search-bar > *{width:100%;}
+  .orn-fields-row{flex-direction:column;align-items:stretch;}
+  .orn-fields-row .field{max-width:none !important;width:100%;}
+  .orn-fields-row .remove{align-self:flex-end;}
+}
+
 /* ---------- Components ---------- */
-.card{background:var(--paper);border:1px solid var(--line);border-radius:var(--radius);box-shadow:var(--shadow);padding:18px;}
+.card{background:var(--paper);border:1px solid var(--line);border-radius:var(--radius);box-shadow:var(--shadow);padding:18px;transition:box-shadow 0.15s ease;}
 .card + .card{margin-top:14px;}
 .grid{display:grid;gap:14px;}
 .grid-2{grid-template-columns:1fr 1fr;} .grid-3{grid-template-columns:repeat(3,1fr);} .grid-4{grid-template-columns:repeat(4,1fr);}
@@ -120,7 +143,9 @@ a{color:var(--gold-deep);}
   display:inline-flex;align-items:center;justify-content:center;gap:6px;
   padding:11px 18px;border-radius:8px;border:1px solid transparent;font-size:14.5px;font-weight:600;
   cursor:pointer;text-decoration:none;font-family:var(--font-body);line-height:1;
+  transition:background 0.15s ease, border-color 0.15s ease, transform 0.1s ease;
 }
+.btn:active{transform:scale(0.97);}
 .btn-primary{background:var(--gold-deep);color:#fff;}
 .btn-primary:hover{background:#654716;}
 .btn-secondary{background:var(--paper);border-color:var(--line);color:var(--ink);}
@@ -159,6 +184,7 @@ tr.clickable{cursor:pointer;} tr.clickable:hover{background:var(--paper-soft);}
 .item-row{display:flex;gap:10px;align-items:flex-end;padding:12px;background:var(--paper-soft);border-radius:8px;margin-bottom:10px;}
 .item-row .field{margin-bottom:0;flex:1;}
 .item-row .remove{flex:0 0 auto;}
+.orn-fields-row{display:flex;gap:10px;align-items:flex-end;flex-wrap:wrap;width:100%;}
 
 .empty-state{text-align:center;padding:50px 20px;color:var(--ink-soft);}
 .empty-state svg{opacity:.4;margin-bottom:10px;}
@@ -192,5 +218,7 @@ tr.clickable{cursor:pointer;} tr.clickable:hover{background:var(--paper-soft);}
 .tabs button{background:none;border:none;padding:10px 16px;font-size:14px;font-weight:600;color:var(--ink-soft);cursor:pointer;border-bottom:2px solid transparent;}
 .tabs button.active{color:var(--gold-deep);border-bottom-color:var(--gold-deep);}
 
-.modal-overlay{position:fixed;inset:0;background:rgba(43,36,28,.5);display:flex;align-items:center;justify-content:center;z-index:40;padding:16px;}
-.modal{background:var(--paper);border-radius:12px;padding:22px;width:100%;max-width:480px;max-height:88vh;overflow-y:auto;}
+.modal-overlay{position:fixed;inset:0;background:rgba(43,36,28,.5);display:flex;align-items:center;justify-content:center;z-index:40;padding:16px;animation:overlayFade 0.15s ease;}
+.modal{background:var(--paper);border-radius:12px;padding:22px;width:100%;max-width:480px;max-height:88vh;overflow-y:auto;animation:modalPop 0.18s ease;}
+@keyframes overlayFade{from{opacity:0;}to{opacity:1;}}
+@keyframes modalPop{from{opacity:0;transform:translateY(8px) scale(0.98);}to{opacity:1;transform:translateY(0) scale(1);}}
