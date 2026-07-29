@@ -29,7 +29,14 @@
           <label style="display:flex;align-items:center;gap:6px;font-weight:500;color:var(--ink);"><input type="radio" name="pledgedByMode" value="self" checked style="width:auto;"> Self (the account holder)</label>
           <label style="display:flex;align-items:center;gap:6px;font-weight:500;color:var(--ink);"><input type="radio" name="pledgedByMode" value="other" style="width:auto;"> Someone else</label>
         </div>
-        <input type="text" id="pledgedByName" placeholder="e.g. Ramesh" style="display:none;">
+        <input type="text" id="pledgedByName" placeholder="e.g. Ramesh" style="display:none;margin-bottom:10px;">
+        <div class="grid grid-2" id="pledgedByExtra" style="display:none;">
+          <div class="field"><label>Their mobile number</label><input type="tel" id="pledgedByMobile" placeholder="9876543210"></div>
+          <div class="field"><label>Their Aadhaar number</label><input type="text" id="pledgedByAadhaar" maxlength="12" placeholder="XXXX XXXX XXXX"></div>
+        </div>
+        <div class="field" id="pledgedByAddressField" style="display:none;">
+          <label>Their address / village</label><input type="text" id="pledgedByAddress">
+        </div>
         <div class="hint" id="pledgedByHint"></div>
       </div>
       <div class="field"><label>Remarks</label><textarea id="loanRemarks" placeholder="Any notes about this loan…"></textarea></div>
