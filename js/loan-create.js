@@ -1,5 +1,6 @@
 let capturedLoanPhoto = null;
 let capturedDisbPhoto = null;
+let currentDraftId = null;
 
 requireAuth(async () => {
   renderShell({ active: "loan-create", title: "New Loan" });
@@ -11,6 +12,7 @@ requireAuth(async () => {
   setupPledgedByField();
   wirePhotoCapture("loanPhotoBtn", "loanPhotoPreview", (file) => { capturedLoanPhoto = file; });
   wirePhotoCapture("disbPhotoBtn", "disbPhotoPreview", (file) => { capturedDisbPhoto = file; });
+  await loadDrafts();
 });
 
 function setupPledgedByField() {
@@ -204,6 +206,143 @@ async function saveLoan(e) {
   }
 
   await logActivity(loanRef.id, "Loan created", `${fmtMoney(disbAmount)} to ${customerName}`);
+
+  // If this loan was created from a saved draft, the draft is no longer needed.
+  if (currentDraftId) {
+    await db.collection("loanDrafts").doc(currentDraftId).delete().catch(() => {});
+  }
+
   toast("Loan created");
   location.href = `loan-detail.html?id=${loanRef.id}`;
+}
+
+// ---------- Save as draft ----------
+// Note: photos aren't saved in a draft (files can't be stored directly in
+// Firestore) — re-take them when you come back to finish the loan.
+function collectDraftData() {
+  const custSelect = document.getElementById("customerSelect");
+  return {
+    customerId: custSelect.value,
+    customerLabel: custSelect.value ? custSelect.selectedOptions[0].textContent : "",
+    loanNumber: document.getElementById("loanNumber").value.trim(),
+    loanDate: document.getElementById("loanDate").value,
+    pledgedByMode: document.querySelector('input[name="pledgedByMode"]:checked').value,
+    pledgedByName: document.getElementById("pledgedByName").value.trim(),
+    pledgedByMobile: document.getElementById("pledgedByMobile").value.trim(),
+    pledgedByAadhaar: document.getElementById("pledgedByAadhaar").value.trim(),
+    pledgedByAddress: document.getElementById("pledgedByAddress").value.trim(),
+    loanRemarks: document.getElementById("loanRemarks").value.trim(),
+    itemsIdentityNote: document.getElementById("itemsIdentityNote").value.trim(),
+    ornaments: collectOrnaments(),
+    disbAmount: document.getElementById("disbAmount").value,
+    disbRate: document.getElementById("disbRate").value,
+    disbInterestType: document.getElementById("disbInterestType").value,
+    disbDate: document.getElementById("disbDate").value,
+    disbReason: document.getElementById("disbReason").value.trim(),
+    disbCollector: document.getElementById("disbCollector").value.trim(),
+    disbNotes: document.getElementById("disbNotes").value.trim(),
+    savedAt: firebase.firestore.FieldValue.serverTimestamp(),
+    savedByEmail: (auth.currentUser && auth.currentUser.email) || "",
+  };
+}
+
+async function saveDraft() {
+  const btn = document.getElementById("saveDraftBtn");
+  btn.disabled = true; btn.textContent = "Saving draft…";
+
+  const data = collectDraftData();
+  if (currentDraftId) {
+    await db.collection("loanDrafts").doc(currentDraftId).set(data);
+  } else {
+    const ref = await db.collection("loanDrafts").add(data);
+    currentDraftId = ref.id;
+  }
+
+  btn.disabled = false; btn.textContent = "💾 Save as draft";
+  toast("Draft saved — you'll find it at the top of this page next time");
+  await loadDrafts();
+}
+
+async function loadDrafts() {
+  const snap = await db.collection("loanDrafts").get();
+  const card = document.getElementById("draftsCard");
+  const list = document.getElementById("draftsList");
+
+  if (snap.empty) { card.style.display = "none"; return; }
+  card.style.display = "";
+
+  const drafts = snap.docs.map((d) => ({ id: d.id, ...d.data() }));
+  drafts.sort((a, b) => toJsDate(b.savedAt) - toJsDate(a.savedAt));
+
+  list.innerHTML = drafts.map((d) => `
+    <div class="disb-card">
+      <div class="row"><strong>${escapeHtml(d.customerLabel || "No customer selected")}</strong><span class="hint" style="display:inline;">${fmtDate(d.savedAt)}</span></div>
+      ${d.loanNumber ? `<div class="row"><span class="k">Loan #</span><span>${escapeHtml(d.loanNumber)}</span></div>` : ""}
+      ${d.ornaments && d.ornaments.length ? `<div class="row"><span class="k">Items</span><span>${d.ornaments.map((o) => escapeHtml(o.itemName || "(unnamed)")).join(", ")}</span></div>` : ""}
+      ${d.disbAmount ? `<div class="row"><span class="k">Amount</span><span>${fmtMoney(d.disbAmount)}</span></div>` : ""}
+      <div style="display:flex;gap:8px;margin-top:8px;">
+        <button type="button" class="btn btn-primary btn-sm" onclick="continueDraft('${d.id}')">Continue</button>
+        <button type="button" class="btn btn-ghost btn-sm" onclick="deleteDraft('${d.id}')">Delete</button>
+      </div>
+    </div>
+  `).join("");
+}
+
+async function continueDraft(draftId) {
+  const doc = await db.collection("loanDrafts").doc(draftId).get();
+  if (!doc.exists) { toast("Draft not found"); return; }
+  const d = doc.data();
+  currentDraftId = draftId;
+
+  if (d.customerId) document.getElementById("customerSelect").value = d.customerId;
+  document.getElementById("loanNumber").value = d.loanNumber || "";
+  if (d.loanDate) document.getElementById("loanDate").value = d.loanDate;
+  document.getElementById("loanRemarks").value = d.loanRemarks || "";
+  document.getElementById("itemsIdentityNote").value = d.itemsIdentityNote || "";
+
+  const mode = d.pledgedByMode || "self";
+  document.querySelector(`input[name="pledgedByMode"][value="${mode}"]`).checked = true;
+  document.getElementById("pledgedByName").value = d.pledgedByName || "";
+  document.getElementById("pledgedByMobile").value = d.pledgedByMobile || "";
+  document.getElementById("pledgedByAadhaar").value = d.pledgedByAadhaar || "";
+  document.getElementById("pledgedByAddress").value = d.pledgedByAddress || "";
+  setupPledgedByField(); // re-run to sync visibility + hint text with the restored mode
+
+  document.getElementById("disbAmount").value = d.disbAmount || "";
+  document.getElementById("disbRate").value = d.disbRate || "";
+  document.getElementById("disbInterestType").value = d.disbInterestType || "simple";
+  if (d.disbDate) document.getElementById("disbDate").value = d.disbDate;
+  document.getElementById("disbReason").value = d.disbReason || "";
+  document.getElementById("disbCollector").value = d.disbCollector || "";
+  document.getElementById("disbNotes").value = d.disbNotes || "";
+
+  document.getElementById("ornamentRows").innerHTML = "";
+  if (d.ornaments && d.ornaments.length) {
+    d.ornaments.forEach((o) => {
+      addOrnamentRow();
+      const row = document.querySelectorAll("#ornamentRows [data-row]");
+      const r = row[row.length - 1];
+      r.querySelector(".orn-name").value = o.itemName || "";
+      r.querySelector(".orn-metal").value = o.metalType || "Gold";
+      r.querySelector(".orn-metal").dispatchEvent(new Event("change"));
+      r.querySelector(".orn-weight").value = o.weight || "";
+      r.querySelector(".orn-qty").value = o.qty || 1;
+      r.querySelector(".orn-purity").value = o.purity || "";
+      r.querySelector(".orn-purity").dispatchEvent(new Event("input"));
+    });
+  } else {
+    addOrnamentRow();
+  }
+  updateOrnamentTotals();
+
+  toast("Draft loaded — continue filling it in");
+  window.scrollTo({ top: 0, behavior: "smooth" });
+}
+
+async function deleteDraft(draftId) {
+  if (!confirm("Delete this draft? This can't be undone.")) return;
+  await db.collection("loanDrafts").doc(draftId).delete();
+  if (currentDraftId === draftId) currentDraftId = null;
+  toast("Draft deleted");
+  await loadDrafts();
 }
