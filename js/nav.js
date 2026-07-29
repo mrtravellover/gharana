@@ -50,6 +50,21 @@ function renderShell({ active, title }) {
     content.innerHTML = staged.innerHTML;
     staged.remove();
   }
+
+  wrapTablesForScroll(content);
+}
+
+// Wraps every <table> in a horizontally-scrollable container, so wide
+// tables (interest breakdowns, loan lists, etc.) scroll cleanly on a phone
+// instead of squeezing columns unreadably or breaking row alignment.
+function wrapTablesForScroll(root) {
+  root.querySelectorAll("table").forEach((table) => {
+    if (table.parentElement.classList.contains("table-scroll")) return;
+    const wrap = document.createElement("div");
+    wrap.className = "table-scroll";
+    table.parentElement.insertBefore(wrap, table);
+    wrap.appendChild(table);
+  });
 }
 
 function navLink(item, active) {
