@@ -99,14 +99,27 @@ The "Payment type" dropdown (interest / partial principal / full closure) is jus
 - **Ready-to-release confirmation** — before moving a loan to "ready to release," you see principal, interest, and the **real duration** for each disbursement clearly (e.g. "9 months, 22 days") next to what it's actually charged as under the minimum-month rule (e.g. "10 months (min. rule)") — not just a rounded number with no explanation. You can close this screen anytime without acting on it (Cancel or ✕), then choose to record the payment first or move it to release anyway with the due amount tracked and shown until it's settled.
 - **Give a new loan again on a "ready to release" mortgage** — if the customer needs money again on the same package before you've physically handed it back, just use "+ Add disbursement" on that loan; it automatically moves back to Active
 - Dashboard with active loan count, principal outstanding, interest accrued, today's collections
-- **Reports** page — money in (collections), money out (disbursements), and interest earned, viewable month-by-month or year-by-year, each period's transactions listed with loan/customer detail, plus a compare chart across recent periods
+- **Reports** page — money in (collections), money out (disbursements), and interest earned, viewable **Today / Monthly / Quarterly / Half-yearly / Yearly**, with a "Compare periods" card showing the current period against the previous two side by side (e.g. this month vs last month vs the month before that, or this year vs last year vs the year before that), a trend chart, per-period transaction detail, and a Gold vs Silver / Haali vs Paat metal summary for everything currently in the locker
 
-## Suggested Phase 2 (once Phase 1 is tested in daily use)
+## Finishing touches
 
-- Gold vs silver / Haali vs Paat summary reports
-- Printable receipt / PDF loan slip
-- WhatsApp/SMS due reminders
-- Excel export/backup
-- Village-wise and Aadhaar search filters on the customer list
-- Audit trail (who changed what)
-- Android wrapper (like your rate-board app)
+- **Favicon** — a gold-coin mark (`favicon.svg`) shows in the browser tab and on phone home screens if the site is added there
+- **Custom 404 page** — `404.html` at the root; Vercel automatically serves this for any broken/unknown link, matching the app's look instead of a blank error
+- **Smoother loading** — a small spinner now shows while the page loads instead of raw text, and content fades in once ready (no more flash of unstyled content)
+- **Responsive pass** — tables scroll horizontally on phones instead of squeezing or clipping, form inputs use 16px text on mobile (stops iOS Safari from auto-zooming when you tap a field), modals fit narrow screens properly, and buttons/cards/menus have subtle transitions instead of snapping instantly
+- Confirmed layout holds up from small phones through tablets to full laptop/desktop widths
+
+## Phase 2 — done
+
+- ✅ Gold vs Silver / Haali vs Paat summary — on the Reports page
+- ✅ Printable loan receipt — "🖨 Print receipt" button on any loan, opens the browser print dialog with a clean paper-style layout (items, disbursements, totals, signature lines)
+- ✅ WhatsApp reminders — "💬 WhatsApp reminder" button on any loan opens WhatsApp with a pre-filled message (principal, interest, total due) to the customer's saved mobile number
+- ✅ Excel/CSV export — "⬇ Export CSV" on the Loans page downloads every loan's key figures, opens directly in Excel
+- ✅ Village-wise and Aadhaar search — already built into the Customers search bar (searches name, mobile, Aadhaar, and address/village together)
+- ✅ Audit trail — every disbursement, payment, rate change, item release, ready-to-release move, and closure is logged with who did it and when, shown in an "Activity" section on each loan page
+- ✅ Multi-period report comparison (today/month/quarter/half-year/year, current vs previous two) — see Reports above
+
+## Still remaining (needs infrastructure beyond this web app)
+
+- **Android wrapper** — like your rate-board app; a separate Android Studio project, not part of this web app
+- **SMS reminders** — WhatsApp reminders are free (open WhatsApp with a message), but SMS needs a paid gateway (e.g. Twilio, MSG91) with its own account and API keys — tell me if you want this wired in once you've picked a provider
