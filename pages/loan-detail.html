@@ -1,0 +1,147 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Loan Detail — Gharana Ledger</title>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:wght@500;600&family=Inter:wght@400;500;600;700&family=IBM+Plex+Mono:wght@500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../css/style.css">
+</head>
+<body>
+
+<div id="stagedContent">
+  <div class="card" id="loanHeader">Loading…</div>
+
+  <div class="card" style="margin-top:14px;padding:14px 18px;">
+    <div style="display:flex;gap:10px;flex-wrap:wrap;">
+      <button class="btn btn-primary" onclick="openDisbModal()">+ Add disbursement</button>
+      <button class="btn btn-primary" onclick="openPayModal()">+ Add payment</button>
+      <a href="customer-profile.html" id="topCustomerLink" class="btn btn-secondary">View customer</a>
+    </div>
+  </div>
+
+  <div class="grid grid-2" style="margin-top:14px;align-items:start;">
+    <div class="card">
+      <div class="section-head"><h2>Ornaments pledged</h2></div>
+      <table>
+        <thead><tr><th>Item</th><th>Metal</th><th>Wt (g)</th><th>Qty</th><th>Category</th></tr></thead>
+        <tbody id="ornamentBody"></tbody>
+      </table>
+    </div>
+
+    <div class="card">
+      <div class="section-head">
+        <h2>Disbursements</h2>
+      </div>
+      <div id="disbList"></div>
+    </div>
+  </div>
+
+  <div class="card" style="margin-top:14px;">
+    <h2>Interest breakdown <span style="font-weight:400;font-size:13px;color:var(--ink-soft);">(as of today)</span></h2>
+    <p class="hint">Interest counts day by day, but any part of a month started is still charged as a full month (minimum 1 month) — e.g. 7 days shows as "7 days" below but is charged as 1 month.</p>
+    <div class="divider-dashed"></div>
+    <table>
+      <thead><tr><th>Original date</th><th>Rate/mo</th><th>Principal now</th><th>Interest counted from</th><th>Days</th><th>Charged as</th><th>Interest due</th></tr></thead>
+      <tbody id="interestBody"></tbody>
+    </table>
+    <div class="divider-dashed"></div>
+    <div class="grid grid-4">
+      <div class="stat"><div class="label">Principal outstanding</div><div class="value" id="sumPrincipal">—</div></div>
+      <div class="stat"><div class="label">Interest due now</div><div class="value" id="sumInterestAccrued">—</div></div>
+      <div class="stat"><div class="label">Interest paid so far</div><div class="value" id="sumInterestPaid">—</div></div>
+      <div class="stat"><div class="label">Total payable today</div><div class="value" id="sumPayable" style="color:var(--gold-deep)">—</div></div>
+    </div>
+  </div>
+
+  <div class="card" style="margin-top:14px;">
+    <div class="section-head">
+      <h2>Payments</h2>
+    </div>
+    <table>
+      <thead><tr><th>Date</th><th>Type</th><th>Amount</th><th>Received by</th><th>Remarks</th></tr></thead>
+      <tbody id="payBody"></tbody>
+    </table>
+  </div>
+
+  <div class="card" style="margin-top:14px;" id="statusActionsCard"></div>
+</div>
+
+<!-- Add Disbursement Modal -->
+<div class="modal-overlay" id="disbModal" style="display:none;">
+  <div class="modal">
+    <h2>Add disbursement</h2>
+    <form id="disbForm">
+      <div class="grid grid-2">
+        <div class="field"><label>Amount (₹) *</label><input type="number" id="mDisbAmount" required min="1"></div>
+        <div class="field"><label>Monthly rate (%) *</label><input type="number" id="mDisbRate" required min="0" step="0.1"></div>
+      </div>
+      <div class="field"><label>Date *</label><input type="date" id="mDisbDate" required></div>
+      <div class="grid grid-2">
+        <div class="field"><label>Reason</label><input type="text" id="mDisbReason"></div>
+        <div class="field"><label>Collected by</label><input type="text" id="mDisbCollector"></div>
+      </div>
+      <div class="field"><label>Notes</label><textarea id="mDisbNotes"></textarea></div>
+      <div style="display:flex;gap:10px;">
+        <button type="button" class="btn btn-secondary btn-block" onclick="closeModal('disbModal')">Cancel</button>
+        <button type="submit" class="btn btn-primary btn-block">Save</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- Add Payment Modal -->
+<div class="modal-overlay" id="payModal" style="display:none;">
+  <div class="modal">
+    <h2>Add payment</h2>
+    <form id="payForm">
+      <div class="field">
+        <label>Payment type *</label>
+        <select id="mPayType" required>
+          <option value="interest">Interest only</option>
+          <option value="principal">Partial principal</option>
+          <option value="full">Full closure (principal + interest)</option>
+        </select>
+        <div class="hint">Just a label for your records — every payment automatically clears interest due first, then reduces principal.</div>
+      </div>
+      <div class="grid grid-2">
+        <div class="field"><label>Amount (₹) *</label><input type="number" id="mPayAmount" required min="1"></div>
+        <div class="field"><label>Date *</label><input type="date" id="mPayDate" required></div>
+      </div>
+      <div class="field"><label>Received by</label><input type="text" id="mPayReceiver"></div>
+      <div class="field"><label>Remarks</label><textarea id="mPayRemarks"></textarea></div>
+      <div style="display:flex;gap:10px;">
+        <button type="button" class="btn btn-secondary btn-block" onclick="closeModal('payModal')">Cancel</button>
+        <button type="submit" class="btn btn-primary btn-block">Save</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- Return Photo Modal -->
+<div class="modal-overlay" id="returnModal" style="display:none;">
+  <div class="modal">
+    <h2>Confirm return &amp; close loan</h2>
+    <p style="color:var(--ink-soft);font-size:13.5px;">Take a photo of the customer with the returned jewellery. This is saved permanently as proof of return.</p>
+    <div class="field">
+      <label>Return photo *</label>
+      <input type="file" id="returnPhoto" accept="image/*" capture="environment" required>
+    </div>
+    <div style="display:flex;gap:10px;margin-top:10px;">
+      <button type="button" class="btn btn-secondary btn-block" onclick="closeModal('returnModal')">Cancel</button>
+      <button type="button" class="btn btn-primary btn-block" id="confirmReturnBtn" onclick="confirmReturn()">Confirm &amp; close</button>
+    </div>
+  </div>
+</div>
+
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-storage-compat.js"></script>
+<script src="../js/firebase-config.js"></script>
+<script src="../js/auth.js"></script>
+<script src="../js/nav.js"></script>
+<script src="../js/interest.js"></script>
+<script src="../js/loan-detail.js"></script>
+</body>
+</html>
