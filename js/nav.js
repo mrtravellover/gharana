@@ -9,7 +9,6 @@ const NAV_ITEMS = [
   { key: "loans", href: "loans.html", label: "Loans", icon: "M12 2l3 7h7l-5.5 4.5L18 21l-6-4-6 4 1.5-7.5L2 9h7z" },
   { key: "loan-create", href: "loan-create.html", label: "New Loan", icon: "M12 5v14M5 12h14" },
   { key: "reports", href: "reports.html", label: "Reports", icon: "M3 3v18h18M8 17V9m5 8V5m5 12v-6" },
-  { key: "profile", href: "profile.html", label: "Profile", icon: "M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2M12 11a4 4 0 100-8 4 4 0 000 8z" },
 ];
 
 function renderShell({ active, title }) {
@@ -27,13 +26,19 @@ function renderShell({ active, title }) {
       </nav>
       <div class="user">
         Signed in as<br><strong style="color:#EFE9DC">${user ? user.email : ""}</strong>
-        <div><button class="btn btn-ghost btn-sm" onclick="logout()" style="padding-left:0;color:#B8AF9E">Sign out</button></div>
+        <div style="display:flex;gap:10px;margin-top:4px;">
+          <a href="profile.html" class="btn btn-ghost btn-sm" style="padding-left:0;color:#B8AF9E;${active === "profile" ? "color:#F1E2C2;" : ""}">Profile</a>
+          <button class="btn btn-ghost btn-sm" onclick="logout()" style="padding-left:0;color:#B8AF9E">Sign out</button>
+        </div>
       </div>
     </aside>
     <div class="main">
       <div class="topbar">
         <h1>${title}</h1>
         <div id="topbarActions"></div>
+        <a href="profile.html" class="topbar-profile-btn" title="Profile" aria-label="Profile">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2M12 11a4 4 0 100-8 4 4 0 000 8z"/></svg>
+        </a>
       </div>
       <div class="content" id="pageContent"></div>
     </div>
