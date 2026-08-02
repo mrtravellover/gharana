@@ -119,8 +119,10 @@ a{color:var(--secondary);}
   transition:width 0.2s ease;
 }
 .sidebar.collapsed{width:72px;}
-.sidebar.collapsed .brand img{display:none !important;}
-.sidebar.collapsed .brand::after{content:"G";display:block;text-align:center;font-family:var(--font-display);font-size:22px;font-weight:600;color:var(--gold);}
+.sidebar .brand-full{display:block;}
+.sidebar .brand-icon{display:none;}
+.sidebar.collapsed .brand-full{display:none;}
+.sidebar.collapsed .brand-icon{display:block;}
 .sidebar.collapsed nav a{justify-content:center;padding:11px 0;}
 .sidebar.collapsed nav a .nav-label{display:none;}
 .sidebar.collapsed .user{display:none;}
