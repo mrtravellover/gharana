@@ -40,15 +40,20 @@ function hideSplash(onComplete) {
 function renderShell({ active, title }) {
   if (document.querySelector(".app-shell")) return; // already rendered — avoid duplicating on a later auth-state change
   const user = auth.currentUser;
+  const collapsed = localStorage.getItem("gl_sidebar_collapsed") === "1";
   const shellHTML = `
   <div class="app-shell">
-    <aside class="sidebar">
+    <aside class="sidebar${collapsed ? " collapsed" : ""}" id="sidebar">
       <div class="brand">
         <img src="../assets/logo-white.png" alt="Gharana — Mortgage Management" style="width:100%;max-width:150px;display:block;">
       </div>
       <nav>
         ${NAV_ITEMS.map(i => navLink(i, active)).join("")}
       </nav>
+      <button class="sidebar-toggle" onclick="toggleSidebar()" id="sidebarToggleBtn" title="Collapse sidebar">
+        <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" id="sidebarToggleIcon"><path d="M15 18l-6-6 6-6"/></svg>
+        <span class="nav-label">Collapse</span>
+      </button>
       <div class="user">
         ${t("signed_in_as")}<br><strong style="color:#E8EEF7">${user ? user.email : ""}</strong>
         <div style="display:flex;gap:10px;margin-top:4px;">
@@ -74,6 +79,7 @@ function renderShell({ active, title }) {
 
   document.body.insertAdjacentHTML("afterbegin", shellHTML);
   hideSplash();
+  updateSidebarToggleIcon(collapsed);
 
   // move any pre-existing body content (written by the page) into #pageContent
   const content = document.getElementById("pageContent");
@@ -84,6 +90,22 @@ function renderShell({ active, title }) {
   }
 
   wrapTablesForScroll(content);
+}
+
+function toggleSidebar() {
+  const sidebar = document.getElementById("sidebar");
+  const nowCollapsed = !sidebar.classList.contains("collapsed");
+  sidebar.classList.toggle("collapsed", nowCollapsed);
+  localStorage.setItem("gl_sidebar_collapsed", nowCollapsed ? "1" : "0");
+  updateSidebarToggleIcon(nowCollapsed);
+}
+
+function updateSidebarToggleIcon(collapsed) {
+  const icon = document.getElementById("sidebarToggleIcon");
+  const btn = document.getElementById("sidebarToggleBtn");
+  if (!icon || !btn) return;
+  icon.innerHTML = collapsed ? `<path d="M9 18l6-6-6-6"/>` : `<path d="M15 18l-6-6 6-6"/>`;
+  btn.title = collapsed ? "Expand sidebar" : "Collapse sidebar";
 }
 
 // Wraps every <table> in a horizontally-scrollable container, so wide
@@ -100,9 +122,9 @@ function wrapTablesForScroll(root) {
 }
 
 function navLink(item, active) {
-  return `<a href="${item.href}" class="${item.key === active ? "active" : ""}">
+  return `<a href="${item.href}" class="${item.key === active ? "active" : ""}" title="${t(item.i18nKey)}">
     <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="${item.icon}"/></svg>
-    ${t(item.i18nKey)}
+    <span class="nav-label">${t(item.i18nKey)}</span>
   </a>`;
 }
 function mobileLink(item, active) {
