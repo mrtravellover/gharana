@@ -144,13 +144,17 @@ a{color:var(--secondary);}
 @media (max-width:860px){
   .sidebar{display:none;}
   .mobile-nav{
-    display:flex;position:fixed;bottom:0;left:0;right:0;background:var(--primary);
-    justify-content:space-around;padding:6px 0 max(6px, env(safe-area-inset-bottom));z-index:10;
-    border-top:1px solid rgba(255,255,255,.08);
+    display:flex;position:fixed;left:10px;right:10px;bottom:calc(10px + env(safe-area-inset-bottom));
+    background:var(--primary);border-radius:26px;
+    justify-content:space-around;align-items:center;padding:8px 4px;z-index:10;
+    box-shadow:0 8px 24px rgba(11,42,91,.35);
   }
-  .mobile-nav a{color:#8FA5C4;text-decoration:none;font-size:10.5px;text-align:center;display:flex;flex-direction:column;align-items:center;gap:2px;padding:4px 8px;transition:color 0.15s ease;}
-  .mobile-nav a.active{color:var(--gold-soft);}
-  .mobile-nav svg{width:20px;height:20px;}
+  .mobile-nav a{color:#8FA5C4;text-decoration:none;font-size:10px;text-align:center;display:flex;flex-direction:column;align-items:center;gap:3px;padding:2px 6px;transition:color 0.15s ease;flex:1;min-width:0;}
+  .mobile-nav a.active{color:var(--gold);font-weight:600;}
+  .mobile-nav .nav-icon-wrap{width:32px;height:32px;border-radius:50%;display:flex;align-items:center;justify-content:center;transition:background 0.15s ease;}
+  .mobile-nav a.active .nav-icon-wrap{background:var(--gold);}
+  .mobile-nav a.active .nav-icon-wrap svg{stroke:var(--primary);}
+  .mobile-nav svg{width:19px;height:19px;flex-shrink:0;}
   .content{padding:16px 14px 110px;}
   .topbar{padding:12px 16px;}
 }
@@ -177,7 +181,7 @@ a{color:var(--secondary);}
 .grid{display:grid;gap:14px;}
 .grid > *{min-width:0;}
 .grid-2{grid-template-columns:1fr 1fr;} .grid-3{grid-template-columns:repeat(3,1fr);} .grid-4{grid-template-columns:repeat(4,1fr);}
-@media (max-width:760px){.grid-2,.grid-3,.grid-4{grid-template-columns:1fr;}}
+@media (max-width:760px){.grid-2,.grid-3,.grid-4{grid-template-columns:1fr;}#statCards.grid-4{grid-template-columns:repeat(2,1fr);gap:10px;}.stat-card-modern{padding:14px;}.stat-card-modern .value{font-size:19px;}.stat-card-modern .icon-circle{width:36px;height:36px;margin-bottom:8px;}}
 
 .stat{display:flex;flex-direction:column;gap:2px;}
 .stat .label{font-size:12px;color:var(--ink-soft);text-transform:uppercase;letter-spacing:.03em;}
