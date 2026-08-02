@@ -23,7 +23,15 @@
     <div class="loading-text">LOADING...</div>
   </div>
 </div>
-<script>window.__splashStartTime = Date.now();</script>
+<script>
+  // Only reveal the splash if loading actually takes a moment — fast
+  // in-app navigation should feel instant, not stop for a forced animation.
+  window.__splashStartTime = Date.now();
+  window.__splashRevealTimer = setTimeout(function () {
+    var s = document.getElementById("splash");
+    if (s) { s.classList.add("splash--visible"); window.__splashRevealedAt = Date.now(); }
+  }, 350);
+</script>
 
 <div class="login-wrap">
   <div class="login-card">
