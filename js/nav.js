@@ -45,7 +45,8 @@ function renderShell({ active, title }) {
   <div class="app-shell">
     <aside class="sidebar${collapsed ? " collapsed" : ""}" id="sidebar">
       <div class="brand">
-        <img src="../assets/logo-white.png" alt="Gharana — Mortgage Management" style="width:100%;max-width:150px;display:block;">
+        <img src="../assets/logo-white.png" alt="Gharana — Mortgage Management" class="brand-full" style="width:100%;max-width:150px;">
+        <img src="../assets/icon-logo-white.png" alt="Gharana" class="brand-icon" style="width:100%;max-width:40px;margin:0 auto;">
       </div>
       <nav>
         ${NAV_ITEMS.map(i => navLink(i, active)).join("")}
