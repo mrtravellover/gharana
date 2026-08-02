@@ -166,6 +166,10 @@ The "Payment type" dropdown (interest / partial principal / full closure) is jus
 
 ## Phase 2 — done
 
+- **Splash screen** — shows on first load while the app checks whether you're signed in and (if so) confirms Firestore is reachable. Real navy/gold branded animation, not a fake timer — it fades out the moment that real work finishes, then either reveals the login form or (via the existing sign-in flow) continues straight to the dashboard. Lives inline in `index.html` (the actual entry point) since it needs to run before we know whether to show login or dashboard; `pages/splash.html` also exists as a standalone, fully working version of the same screen, useful as a reference or if you ever want a dedicated gateway page.
+
+- **Modern dashboard redesign** — a time-of-day greeting, four stat cards with real trend indicators (not fake numbers — active loans vs new loans last month, principal vs disbursed last month, interest vs collected last month, today's collections vs yesterday's), a monthly collection area chart with a peak-value tooltip, a recent activity feed pulled from real payment records, a quick-actions grid, and a floating "+ New Loan" button. The sidebar/top navigation itself is unchanged — only the dashboard's own content was redesigned, since rebuilding the shared navigation shell across all 9 pages would be a much larger, riskier job than reskinning one page.
+
 - ✅ Gold vs Silver / Haali vs Paat summary — on the Reports page
 - ✅ Printable loan receipt — "🖨 Print receipt" button on any loan, opens the browser print dialog with a clean paper-style layout (items, disbursements, totals, signature lines)
 - ✅ WhatsApp reminders — "💬 WhatsApp reminder" button on any loan opens WhatsApp with a pre-filled message (principal, interest, total due) to the customer's saved mobile number
