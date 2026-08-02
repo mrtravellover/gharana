@@ -115,8 +115,23 @@ a{color:var(--secondary);}
 .app-shell{display:flex;min-height:100vh;}
 .sidebar{
   width:220px;flex-shrink:0;background:var(--primary);color:#E8EEF7;
-  display:flex;flex-direction:column;padding:20px 0;position:sticky;top:0;height:100vh;
+  display:flex;flex-direction:column;padding:20px 0;position:sticky;top:0;min-height:100vh;align-self:stretch;
+  transition:width 0.2s ease;
 }
+.sidebar.collapsed{width:72px;}
+.sidebar.collapsed .brand img{display:none;}
+.sidebar.collapsed .brand::after{content:"G";display:block;text-align:center;font-family:var(--font-display);font-size:22px;font-weight:600;color:var(--gold);}
+.sidebar.collapsed nav a{justify-content:center;padding:11px 0;}
+.sidebar.collapsed nav a .nav-label{display:none;}
+.sidebar.collapsed .user{display:none;}
+.sidebar.collapsed .sidebar-toggle .nav-label{display:none;}
+.sidebar.collapsed .sidebar-toggle{justify-content:center;}
+.sidebar-toggle{
+  background:none;border:none;width:100%;color:#8FA5C4;cursor:pointer;
+  display:flex;align-items:center;gap:10px;padding:11px 20px;font-size:13px;font-family:var(--font-body);
+  transition:color 0.15s ease;
+}
+.sidebar-toggle:hover{color:#fff;}
 .sidebar .brand{padding:0 20px 18px;border-bottom:1px solid rgba(255,255,255,.1);margin-bottom:10px;}
 .sidebar nav a{
   display:flex;align-items:center;gap:10px;padding:11px 20px;color:#A9BFDD;text-decoration:none;font-size:14px;
