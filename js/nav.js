@@ -11,14 +11,23 @@ const NAV_ITEMS = [
   { key: "reports", href: "reports.html", i18nKey: "nav_reports", icon: "M3 3v18h18M8 17V9m5 8V5m5 12v-6" },
 ];
 
-const SPLASH_MIN_MS = 1400; // let the splash animation actually be seen, even on a fast connection
+const SPLASH_MIN_VISIBLE_MS = 900; // once actually shown, keep it up at least this long so it doesn't flash
 
 function hideSplash(onComplete) {
   const splash = document.getElementById("splash");
   if (!splash) { if (typeof onComplete === "function") onComplete(); return; }
-  const startedAt = window.__splashStartTime || Date.now();
-  const elapsed = Date.now() - startedAt;
-  const wait = Math.max(0, SPLASH_MIN_MS - elapsed);
+  if (window.__splashRevealTimer) clearTimeout(window.__splashRevealTimer);
+
+  const wasRevealed = splash.classList.contains("splash--visible");
+  if (!wasRevealed) {
+    // Finished before the reveal delay — never shown, so just remove it. No flash, no wait.
+    splash.style.display = "none";
+    if (typeof onComplete === "function") onComplete();
+    return;
+  }
+
+  const elapsed = Date.now() - (window.__splashRevealedAt || Date.now());
+  const wait = Math.max(0, SPLASH_MIN_VISIBLE_MS - elapsed);
   setTimeout(() => {
     splash.classList.add("splash--exit");
     setTimeout(() => {
