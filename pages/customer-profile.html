@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Customer Profile — Gharana</title>
+<link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png">
+<link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png">
+<link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png">
+<link rel="manifest" href="/site.webmanifest">
+<meta name="theme-color" content="#0B2A5B">
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:wght@500;600&family=Inter:wght@400;500;600;700&family=IBM+Plex+Mono:wght@500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../css/style.css">
+</head>
+<body>
+
+<div class="splash" id="splash">
+  <div class="stage">
+    <div class="app-name">Gharana</div>
+    <div class="tagline">MORTGAGE MANAGEMENT</div>
+    <div class="loading-track"><div class="loading-fill"></div></div>
+    <div class="loading-text">LOADING...</div>
+  </div>
+</div>
+<script>window.__splashStartTime = Date.now();</script>
+
+<div id="stagedContent">
+  <div class="grid grid-2">
+    <div class="card" id="profileCard">Loading…</div>
+    <div class="card">
+      <div class="section-head"><h2>Photo</h2><button class="btn btn-secondary btn-sm" id="custPhotoBtn">📷 Retake</button></div>
+      <div id="profilePhotoWrap"></div>
+      <div class="divider-dashed"></div>
+      <div class="section-head"><h2>Notes</h2><button class="btn btn-ghost btn-sm" onclick="toggleNotesEdit()" id="notesEditToggle">Edit</button></div>
+      <p id="profileNotes" style="color:var(--ink-soft);">—</p>
+      <div id="profileNotesEdit" style="display:none;">
+        <textarea id="profileNotesInput" placeholder="e.g. Ask customer to clear dues"></textarea>
+        <button class="btn btn-primary btn-sm" style="margin-top:8px;" onclick="saveNotes()">Save note</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="card" style="margin-top:16px;">
+    <h2>Account status</h2>
+    <div class="divider-dashed"></div>
+    <div id="accountStatusWrap"></div>
+  </div>
+
+  <div class="card" style="margin-top:16px;">
+    <div class="section-head">
+      <h2>Loans</h2>
+      <a href="#" id="newLoanLink" class="btn btn-primary btn-sm">+ New loan</a>
+    </div>
+    <div class="search-bar">
+      <input type="text" id="loanSearchInput" placeholder="Search this customer's loans by item name (e.g. chain) or loan number…">
+    </div>
+    <table>
+      <thead><tr><th>Loan #</th><th>Items</th><th>Locker note</th><th>Date</th><th>Principal</th><th>Status</th></tr></thead>
+      <tbody id="loanBody"><tr><td colspan="6" style="color:var(--ink-soft);padding:20px 0;">Loading…</td></tr></tbody>
+    </table>
+  </div>
+</div>
+
+<!-- Account Status Change Modal -->
+<div class="modal-overlay" id="statusChangeModal" style="display:none;">
+  <div class="modal">
+    <h2 id="statusChangeTitle">Change account status</h2>
+    <input type="hidden" id="statusChangeTarget">
+    <p style="color:var(--ink-soft);font-size:13.5px;">A remark is required so there's always a record of why.</p>
+    <div class="field"><label>Remark *</label><textarea id="statusChangeRemark" placeholder="e.g. Customer requested account closure, all loans settled"></textarea></div>
+    <div style="display:flex;gap:10px;">
+      <button type="button" class="btn btn-secondary btn-block" onclick="closeModal('statusChangeModal')">Cancel</button>
+      <button type="button" class="btn btn-primary btn-block" id="statusChangeConfirmBtn" onclick="confirmStatusChange()">Confirm</button>
+    </div>
+  </div>
+</div>
+
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-storage-compat.js"></script>
+<script src="../js/firebase-config.js"></script>
+<script src="../js/auth.js"></script>
+<script src="../js/i18n.js"></script>
+<script src="../js/nav.js"></script>
+<script src="../js/camera.js"></script>
+<script src="../js/interest.js"></script>
+<script src="../js/customer-profile.js"></script>
+</body>
+</html>
