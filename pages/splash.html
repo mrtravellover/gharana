@@ -9,6 +9,8 @@
 <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png">
 <link rel="manifest" href="/site.webmanifest">
 <meta name="theme-color" content="#0B2A5B">
+<link rel="preconnect" href="https://www.gstatic.com">
+<link rel="preconnect" href="https://firestore.googleapis.com">
 <style>
   :root{
     --navy:#0B2A5B;
@@ -239,14 +241,12 @@
   window.__splashStartTime = Date.now();
   window.__splashRevealTimer = setTimeout(function () {
     var s = document.getElementById("splash");
-    if (s) { s.classList.add("splash--visible"); window.__splashRevealedAt = Date.now(); }
+    if (s) { s.classList.add("splash--visible"); }
   }, 350);
-  const SPLASH_MIN_VISIBLE_MS = 900;
 
   // Call window.gharanaSplashDone() once real data/assets are ready.
   // If loading finished before the reveal delay above, the splash was
-  // never shown, so it's removed instantly with no flash. If it was
-  // shown, it stays up a minimum time so it doesn't flicker, then fades.
+  // never shown, so it's removed instantly with no flash and no wait.
   window.gharanaSplashDone = function (onComplete) {
     const splash = document.getElementById('splash');
     if (window.__splashRevealTimer) clearTimeout(window.__splashRevealTimer);
@@ -257,15 +257,11 @@
       return;
     }
 
-    const elapsed = Date.now() - (window.__splashRevealedAt || Date.now());
-    const wait = Math.max(0, SPLASH_MIN_VISIBLE_MS - elapsed);
+    splash.classList.add('splash--exit');
     setTimeout(() => {
-      splash.classList.add('splash--exit');
-      setTimeout(() => {
-        splash.style.display = 'none';
-        if (typeof onComplete === 'function') onComplete();
-      }, 600);
-    }, wait);
+      splash.style.display = 'none';
+      if (typeof onComplete === 'function') onComplete();
+    }, 300);
   };
 
   // Real startup work: resolve auth state, then send the person to the
