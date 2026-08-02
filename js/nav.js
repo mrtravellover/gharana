@@ -101,7 +101,9 @@ function navLink(item, active) {
 }
 function mobileLink(item, active) {
   return `<a href="${item.href}" class="${item.key === active ? "active" : ""}">
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="${item.icon}"/></svg>
+    <span class="nav-icon-wrap">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="${item.icon}"/></svg>
+    </span>
     ${t(item.i18nKey)}
   </a>`;
 }
