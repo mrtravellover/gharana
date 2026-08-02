@@ -11,6 +11,23 @@ const NAV_ITEMS = [
   { key: "reports", href: "reports.html", i18nKey: "nav_reports", icon: "M3 3v18h18M8 17V9m5 8V5m5 12v-6" },
 ];
 
+const SPLASH_MIN_MS = 1400; // let the splash animation actually be seen, even on a fast connection
+
+function hideSplash(onComplete) {
+  const splash = document.getElementById("splash");
+  if (!splash) { if (typeof onComplete === "function") onComplete(); return; }
+  const startedAt = window.__splashStartTime || Date.now();
+  const elapsed = Date.now() - startedAt;
+  const wait = Math.max(0, SPLASH_MIN_MS - elapsed);
+  setTimeout(() => {
+    splash.classList.add("splash--exit");
+    setTimeout(() => {
+      splash.style.display = "none";
+      if (typeof onComplete === "function") onComplete();
+    }, 600); // matches 250ms bar-complete + 300ms fade + buffer
+  }, wait);
+}
+
 function renderShell({ active, title }) {
   if (document.querySelector(".app-shell")) return; // already rendered — avoid duplicating on a later auth-state change
   const user = auth.currentUser;
@@ -47,7 +64,7 @@ function renderShell({ active, title }) {
   </nav>`;
 
   document.body.insertAdjacentHTML("afterbegin", shellHTML);
-  document.body.classList.remove("loading");
+  hideSplash();
 
   // move any pre-existing body content (written by the page) into #pageContent
   const content = document.getElementById("pageContent");
