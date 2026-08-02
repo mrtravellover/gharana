@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Profile — Gharana</title>
+<link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png">
+<link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png">
+<link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png">
+<link rel="manifest" href="/site.webmanifest">
+<meta name="theme-color" content="#0B2A5B">
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:wght@500;600&family=Inter:wght@400;500;600;700&family=IBM+Plex+Mono:wght@500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../css/style.css">
+</head>
+<body>
+
+<div class="splash" id="splash">
+  <div class="stage">
+    <div class="app-name">Gharana</div>
+    <div class="tagline">MORTGAGE MANAGEMENT</div>
+    <div class="loading-track"><div class="loading-fill"></div></div>
+    <div class="loading-text">LOADING...</div>
+  </div>
+</div>
+<script>
+  // Only reveal the splash if loading actually takes a moment — fast
+  // in-app navigation should feel instant, not stop for a forced animation.
+  window.__splashStartTime = Date.now();
+  window.__splashRevealTimer = setTimeout(function () {
+    var s = document.getElementById("splash");
+    if (s) { s.classList.add("splash--visible"); window.__splashRevealedAt = Date.now(); }
+  }, 350);
+</script>
+
+<div id="stagedContent">
+  <div class="card">
+    <h2>Account</h2>
+    <div class="divider-dashed"></div>
+    <div class="stat" style="margin-bottom:14px;"><div class="label">Signed in as</div><div class="value" style="font-size:16px;" id="profileEmail">—</div></div>
+    <button class="btn btn-secondary" onclick="logout()">Sign out</button>
+  </div>
+
+  <div class="card" style="margin-top:16px;">
+    <h2>Language</h2>
+    <div class="divider-dashed"></div>
+    <p style="color:var(--ink-soft);font-size:13.5px;margin-bottom:10px;">Changes the navigation menu and login screen. Loan forms and reports stay in English for now.</p>
+    <select id="langSelect" style="max-width:280px;"></select>
+  </div>
+
+  <div class="card" style="margin-top:16px;border-color:var(--danger);">
+    <h2 style="color:var(--danger);">⚠ Danger zone</h2>
+    <div class="divider-dashed"></div>
+    <p style="color:var(--ink-soft);font-size:13.5px;margin-bottom:12px;">
+      This permanently deletes every customer, loan, ornament, disbursement, payment, activity log entry, saved draft, and photo in the app. Your and your father's login accounts are not affected — you'll still be able to sign in with the same email and password afterward, into a completely empty app.
+    </p>
+    <button class="btn btn-danger" onclick="startReset()">Reset whole panel</button>
+  </div>
+</div>
+
+<!-- Step 1 & Step 3: Authentication Modal -->
+<div class="modal-overlay" id="authModal" style="display:none;">
+  <div class="modal">
+    <h2 id="authModalTitle">Confirm your login</h2>
+    <p style="color:var(--ink-soft);font-size:13.5px;">Enter your email and password to continue.</p>
+    <div class="field"><label>Email</label><input type="email" id="authEmail"></div>
+    <div class="field"><label>Password</label><input type="password" id="authPassword"></div>
+    <p id="authError" style="color:var(--danger);font-size:13px;display:none;"></p>
+    <div style="display:flex;gap:10px;">
+      <button type="button" class="btn btn-secondary btn-block" onclick="cancelReset()">Cancel</button>
+      <button type="button" class="btn btn-danger btn-block" id="authConfirmBtn" onclick="handleAuthSubmit()">Confirm</button>
+    </div>
+  </div>
+</div>
+
+<!-- Step 2: Countdown Confirmation Modal -->
+<div class="modal-overlay" id="countdownModal" style="display:none;">
+  <div class="modal">
+    <h2 style="color:var(--danger);">⚠ This will delete everything</h2>
+    <p style="background:var(--danger-soft);color:var(--danger);padding:12px 14px;border-radius:8px;font-size:14px;font-weight:600;margin-bottom:14px;">
+      All customers, loans, ornaments, disbursements, payments, activity logs, drafts, and photos will be permanently deleted. This cannot be undone. Your login will stay the same.
+    </p>
+    <p style="text-align:center;font-size:13px;color:var(--ink-soft);margin-bottom:6px;">Please wait before you can proceed</p>
+    <p style="text-align:center;font-size:40px;font-weight:700;font-family:var(--font-mono);margin-bottom:14px;" id="countdownNumber">10</p>
+    <div style="display:flex;gap:10px;">
+      <button type="button" class="btn btn-secondary btn-block" onclick="cancelReset()">Cancel</button>
+      <button type="button" class="btn btn-danger btn-block" id="countdownConfirmBtn" onclick="proceedToSecondAuth()" disabled>Wait…</button>
+    </div>
+  </div>
+</div>
+
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-storage-compat.js"></script>
+<script src="../js/firebase-config.js"></script>
+<script src="../js/auth.js"></script>
+<script src="../js/i18n.js"></script>
+<script src="../js/nav.js"></script>
+<script src="../js/profile.js"></script>
+</body>
+</html>
