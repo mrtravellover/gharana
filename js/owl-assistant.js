@@ -128,6 +128,7 @@
         <div class="owl-w-chips" id="owlWChips">
           <div class="owl-w-chip" data-preset="check account of ">Check a customer</div>
           <div class="owl-w-chip" data-preset="10000 2% 12-08-2024">10000 2% 12-08-2024</div>
+          <div class="owl-w-chip" data-preset="10000 2% 12-08-2024 CA">...CA (compound annually)</div>
         </div>
         <div class="owl-w-footer">
           <div class="owl-w-inputbar">
@@ -150,22 +151,102 @@
   /* ============================================================
      PARSER
      ============================================================ */
-  function parseDate(str) {
-    const m = str.match(/(\d{1,2})[-\/](\d{1,2})[-\/](\d{2,4})/);
-    if (!m) return null;
-    let [, dd, mm, yy] = m;
-    yy = yy.length === 2 ? "20" + yy : yy;
-    const dt = new Date(`${yy}-${mm.padStart(2, "0")}-${dd.padStart(2, "0")}`);
-    return isNaN(dt) ? null : dt;
+  function isValidDMY(d, mo, y) {
+    return d >= 1 && d <= 31 && mo >= 1 && mo <= 12 && y >= 1970 && y <= 2099;
   }
+  function normalizeYear(yy) {
+    // 2-digit year window: 00-79 -> 2000s, 80-99 -> 1900s (standard convention)
+    return yy <= 79 ? 2000 + yy : 1900 + yy;
+  }
+  function buildDate(d, mo, y) {
+    const dt = new Date(y, mo - 1, d);
+    // Rejects overflow dates the JS Date constructor would otherwise silently roll over (e.g. 31 Feb -> 3 Mar)
+    if (dt.getDate() !== d || dt.getMonth() !== mo - 1 || dt.getFullYear() !== y) return null;
+    return dt;
+  }
+
+  // Finds every date in the message, in any common format:
+  // dd-mm-yyyy, dd/mm/yyyy, dd.mm.yyyy, dd-mm-yy, dd/mm/yy, dd.mm.yy,
+  // and no-separator ddmmyyyy / ddmmyy. Each candidate is validated against
+  // real day (1-31) and month (1-12) ranges, so a plain number — like the
+  // principal amount — is never mistaken for a date. Returns the matched
+  // dates plus the message with those exact substrings removed, so the
+  // principal-amount extraction downstream never sees the date digits.
+  function extractDates(text) {
+    const found = [];
+    const consider = (m, dRaw, moRaw, yRaw) => {
+      const d = parseInt(dRaw, 10), mo = parseInt(moRaw, 10);
+      const y = yRaw.length <= 2 ? normalizeYear(parseInt(yRaw, 10)) : parseInt(yRaw, 10);
+      if (!isValidDMY(d, mo, y)) return;
+      const dt = buildDate(d, mo, y);
+      if (dt) found.push({ start: m.index, end: m.index + m[0].length, date: dt });
+    };
+
+    // Separated: dd [-/.] mm [-/.] (yyyy or yy)
+    const sepRe = /\b(\d{1,2})[-\/.](\d{1,2})[-\/.](\d{4}|\d{2})\b/g;
+    let m;
+    while ((m = sepRe.exec(text))) consider(m, m[1], m[2], m[3]);
+
+    // No separator, exactly 8 digits: ddmmyyyy
+    const bare8Re = /\b(\d{2})(\d{2})(\d{4})\b/g;
+    while ((m = bare8Re.exec(text))) consider(m, m[1], m[2], m[3]);
+
+    // No separator, exactly 6 digits: ddmmyy
+    const bare6Re = /\b(\d{2})(\d{2})(\d{2})\b/g;
+    while ((m = bare6Re.exec(text))) consider(m, m[1], m[2], m[3]);
+
+    found.sort((a, b) => a.start - b.start);
+    const deduped = [];
+    for (const f of found) {
+      if (deduped.some((d2) => f.start < d2.end && f.end > d2.start)) continue; // skip overlapping matches
+      deduped.push(f);
+    }
+
+    let strippedText = text;
+    for (let i = deduped.length - 1; i >= 0; i--) {
+      const f = deduped[i];
+      strippedText = strippedText.slice(0, f.start) + " " + strippedText.slice(f.end);
+    }
+
+    return { dates: deduped.map((f) => f.date), strippedText };
+  }
+
+  function detectInterestType(lower) {
+    // Only two options via chat now: simple, or compounding annually.
+    // Triggers on the "CA" shortcut, or the word compound/compounding on its own.
+    const hasCAShortcut = /\bca\b/.test(lower);
+    const wantsCompound = /\bcompound(ing)?\b/.test(lower);
+    return (hasCAShortcut || wantsCompound) ? "compound_annual" : "simple";
+  }
+
   function parseQuery(text) {
     const lower = text.toLowerCase();
-    const dateMatches = [...text.matchAll(/(\d{1,2}[-\/]\d{1,2}[-\/]\d{2,4})/g)].map((m) => parseDate(m[1]));
     const rateMatch = text.match(/(\d+(\.\d+)?)\s*%/);
-    const rate = rateMatch ? parseFloat(rateMatch[1]) : null;
-    let stripped = text.replace(/(\d{1,2}[-\/]\d{1,2}[-\/]\d{2,4})/g, "").replace(/(\d+(\.\d+)?)\s*%/g, "");
+    let rate = rateMatch ? parseFloat(rateMatch[1]) : null;
+    const interestType = detectInterestType(lower);
+    const { dates: dateMatches, strippedText: afterDates } = extractDates(text);
+    let stripped = afterDates.replace(/(\d+(\.\d+)?)\s*%/g, "");
     const numMatches = [...stripped.matchAll(/\d[\d,]*(\.\d+)?/g)].map((m) => parseFloat(m[0].replace(/,/g, "")));
-    const principal = numMatches.length ? Math.max(...numMatches) : null;
+
+    let principal = null;
+    if (rate !== null) {
+      // Rate already found via an explicit "%" — whatever's left is the principal.
+      principal = numMatches.length ? Math.max(...numMatches) : null;
+    } else if (numMatches.length >= 2) {
+      // No "%" sign at all — a monthly interest rate is always under 50, so use
+      // that to tell rate and principal apart instead of guessing wrong.
+      const small = numMatches.filter((n) => n < 50);
+      const large = numMatches.filter((n) => n >= 50);
+      if (small.length && large.length) {
+        rate = Math.max(...small);
+        principal = Math.max(...large);
+      } else {
+        principal = Math.max(...numMatches);
+      }
+    } else {
+      principal = numMatches.length ? Math.max(...numMatches) : null;
+    }
+
     const isAccountQuery = /account|loan|customer|check/i.test(lower) && !principal && !rate;
     if (isAccountQuery || (!principal && !rate && !dateMatches.length)) {
       const stopwords = ["check", "account", "of", "the", "loan", "customer", "show", "me", "please", "status"];
@@ -173,7 +254,7 @@
       return { type: "account", name: nameWords.join(" ").trim() };
     }
     if (principal || rate || dateMatches.length) {
-      return { type: "calc", principal, rate, fromDate: dateMatches[0] || null, toDate: dateMatches[1] || new Date() };
+      return { type: "calc", principal, rate, fromDate: dateMatches[0] || null, toDate: dateMatches[1] || new Date(), interestType };
     }
     return { type: "unknown" };
   }
@@ -305,21 +386,24 @@
     }
     const toDate = q.toDate || new Date();
     const days = daysBetween(q.fromDate, toDate);
-    const interest = periodInterest(q.principal, q.rate, q.fromDate, toDate, "simple");
+    const interestType = q.interestType || "simple";
+    const interest = periodInterest(q.principal, q.rate, q.fromDate, toDate, interestType);
     const floorValue = round2(q.principal * (q.rate / 100));
     const minimumApplied = days > 0 && interest <= floorValue + 0.01;
+    const typeLabel = interestType === "compound_annual" ? "Compounding (annually)" : "Simple";
 
     addCard(`
       <div class="owl-w-card-body">
         <div class="owl-w-row"><span class="l">Principal</span><span class="v">${fmtMoney(q.principal)}</span></div>
         <div class="owl-w-row"><span class="l">Monthly rate</span><span class="v">${q.rate}%</span></div>
+        <div class="owl-w-row"><span class="l">Method</span><span class="v">${typeLabel}</span></div>
         <div class="owl-w-row"><span class="l">From</span><span class="v">${fmtDate(q.fromDate)}</span></div>
         <div class="owl-w-row"><span class="l">To</span><span class="v">${fmtDate(toDate)}</span></div>
         <div class="owl-w-row"><span class="l">Duration</span><span class="v">${formatDuration(days)}</span></div>
         <div class="owl-w-row"><span class="l">Interest</span><span class="v owl-w-v-gold">${fmtMoney(interest)}</span></div>
         <div class="owl-w-row" style="margin-top:6px;"><span class="l">Total payable</span><span class="v owl-w-v-emerald">${fmtMoney(round2(q.principal + interest))}</span></div>
       </div>
-      <div class="owl-w-hint" style="padding:0 14px 12px;">${minimumApplied ? "1-month minimum applied." : "Exact — 365/366-day method."}</div>
+      <div class="owl-w-hint" style="padding:0 14px 12px;">${minimumApplied ? "1-month minimum applied." : "Exact — 365/366-day method."}${interestType === "simple" ? ' Add "CA" to your message for compounding annually.' : ""}</div>
     `);
     setOwlState("happy");
   }
@@ -457,7 +541,7 @@
         if (launcherFallback) launcherFallback.style.display = "flex";
       });
 
-    addBotText('Hoo-hoo! 🦉 Ask me to <b>check a customer\'s account</b>, or give me a quick calc like <b>"10000 2% 12-08-2024"</b>.');
+    addBotText('Hoo-hoo! 🦉 Ask me to <b>check a customer\'s account</b>, or give me a quick calc like <b>"10000 2% 12-08-2024"</b> — add <b>"CA"</b> to the message for compounding annually instead of simple.');
   }
 
   // Only show the assistant once someone is actually logged in — mirrors requireAuth()'s pattern.
