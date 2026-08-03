@@ -65,9 +65,9 @@
     @media (max-width:480px){ .owl-w-phone{ right:10px; width:calc(100vw - 20px); } }
     .owl-w-phone.owl-w-hidden{display:none;}
     .owl-w-topbar{background:linear-gradient(135deg,#0B2A5B,#184A8C);color:#fff;padding:10px 16px;display:flex;align-items:center;gap:10px;flex-shrink:0;cursor:pointer;touch-action:manipulation;}
-    .owl-w-avatar-wrap{width:88px;height:88px;flex-shrink:0;position:relative;}
-    .owl-w-avatar{width:100%;height:100%;}
-    .owl-w-fallback{position:absolute;top:0;left:0;}
+    .owl-w-avatar-wrap{height:88px;min-width:88px;flex-shrink:0;position:relative;display:flex;align-items:center;justify-content:center;}
+    .owl-w-avatar{width:auto;height:86px;max-width:140px;object-fit:contain;display:block;flex-shrink:0;}
+    .owl-w-fallback{display:none;}
     .owl-w-topbar h1{font-size:15px;margin:0;font-weight:700;color:#fff;font-family:var(--font-body, inherit);}
     .owl-w-topbar p{font-size:11.5px;margin:2px 0 0;opacity:.85;color:#fff;font-family:var(--font-body, inherit);}
     .owl-w-status-dot{width:7px;height:7px;border-radius:50%;background:#10B981;display:inline-block;margin-right:5px;box-shadow:0 0 0 3px rgba(16,185,129,.25);}
@@ -112,7 +112,7 @@
       <div class="owl-w-phone owl-w-hidden" id="owlWPhone">
         <div class="owl-w-topbar" id="owlWTopbar">
           <div class="owl-w-avatar-wrap">
-            <dotlottie-wc class="owl-w-avatar" id="owlWLottie" src="${LOTTIE_OWL_SRC}" autoplay loop style="width:100%;height:100%;display:block;"></dotlottie-wc>
+            <dotlottie-wc class="owl-w-avatar" id="owlWLottie" src="${LOTTIE_OWL_SRC}" autoplay loop></dotlottie-wc>
             <svg class="owl-w-avatar owl-w-fallback" id="owlWFallback" viewBox="0 0 100 100" style="display:none;">
               <ellipse cx="50" cy="58" rx="34" ry="30" fill="#D4A017"/>
               <ellipse cx="30" cy="30" rx="14" ry="14" fill="#D4A017"/>
