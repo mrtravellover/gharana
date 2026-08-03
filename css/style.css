@@ -273,10 +273,36 @@ tr.clickable{cursor:pointer;} tr.clickable:hover{background:var(--paper-soft);}
 .status-dot-hold{background:#C99A2E;}
 .status-dot-closed{background:var(--danger);}
 
-.login-wrap{min-height:100vh;display:flex;align-items:center;justify-content:center;background:var(--primary);padding:20px;}
+.login-wrap{min-height:100vh;display:flex;flex-direction:column;align-items:center;justify-content:center;background:var(--primary);padding:20px;}
 .login-card{background:var(--paper);border-radius:14px;padding:36px 32px;width:100%;max-width:380px;box-shadow:0 20px 60px rgba(0,0,0,.35);}
 .login-card .mark{font-family:var(--font-display);font-size:28px;color:var(--primary);text-align:center;margin-bottom:2px;}
 .login-card .tag{text-align:center;color:var(--ink-soft);font-size:13px;margin-bottom:24px;}
+
+/* ---------- Login owl animation (decorative, additive only) ---------- */
+.login-owl-container{
+  display:flex;align-items:center;justify-content:center;
+  width:100%;max-width:380px; /* matches .login-card so it sits centered above it, never overlapping */
+  margin:0 auto 4px;
+}
+.login-owl{width:300px;height:300px;max-width:100%;}
+@media (max-width:1024px){ .login-owl{width:250px;height:250px;} }
+@media (max-width:640px){ .login-owl{width:200px;height:200px;} }
+
+@media (prefers-reduced-motion: reduce){
+  /* Belt-and-suspenders alongside the JS check — if reduced motion is on,
+     the animation still renders (accessible, not hidden) but the JS module
+     disables looping/autoplay so it settles on a single static frame. */
+  .login-owl{ animation:none; }
+}
+
+/* Shake the login CARD only (never the owl) on a failed sign-in */
+.login-card--shake{ animation:loginCardShake 0.4s ease; }
+@keyframes loginCardShake{
+  10%,90%{ transform:translateX(-1px); }
+  20%,80%{ transform:translateX(2px); }
+  30%,50%,70%{ transform:translateX(-4px); }
+  40%,60%{ transform:translateX(4px); }
+}
 
 .section-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;flex-wrap:wrap;gap:8px;}
 
