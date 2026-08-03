@@ -52,16 +52,16 @@
     @media (max-width:860px){ .owl-w-phone{ bottom:96px; } }
     @media (max-width:480px){ .owl-w-phone{ left:10px; width:calc(100vw - 20px); } }
     .owl-w-phone.owl-w-hidden{display:none;}
-    .owl-w-topbar{background:linear-gradient(135deg,#0B2A5B,#184A8C);color:#fff;padding:14px 16px;display:flex;align-items:center;gap:12px;flex-shrink:0;cursor:pointer;touch-action:manipulation;}
-    .owl-w-avatar-wrap{width:38px;height:38px;flex-shrink:0;position:relative;}
+    .owl-w-topbar{background:linear-gradient(135deg,#0B2A5B,#184A8C);color:#fff;padding:12px 16px;display:flex;align-items:center;gap:12px;flex-shrink:0;cursor:pointer;touch-action:manipulation;}
+    .owl-w-avatar-wrap{width:56px;height:56px;flex-shrink:0;position:relative;}
     .owl-w-avatar{width:100%;height:100%;}
     .owl-w-fallback{position:absolute;top:0;left:0;}
-    .owl-w-topbar h1{font-size:15px;margin:0;font-weight:700;}
-    .owl-w-topbar p{font-size:11.5px;margin:2px 0 0;opacity:.8;}
+    .owl-w-topbar h1{font-size:15px;margin:0;font-weight:700;color:#fff;font-family:var(--font-body, inherit);}
+    .owl-w-topbar p{font-size:11.5px;margin:2px 0 0;opacity:.85;color:#fff;font-family:var(--font-body, inherit);}
     .owl-w-status-dot{width:7px;height:7px;border-radius:50%;background:#10B981;display:inline-block;margin-right:5px;box-shadow:0 0 0 3px rgba(16,185,129,.25);}
     .owl-w-collapse-btn{background:rgba(255,255,255,.15);border:none;color:#fff;width:28px;height:28px;border-radius:50%;font-size:13px;cursor:pointer;flex-shrink:0;display:flex;align-items:center;justify-content:center;touch-action:manipulation;}
     .owl-w-chat{padding:16px;display:flex;flex-direction:column;gap:12px;background:#F8FAFC;overflow-y:auto;flex:1;min-height:0;overscroll-behavior:contain;touch-action:pan-y;-webkit-overflow-scrolling:touch;}
-    body.owl-w-locked{overflow:hidden;overscroll-behavior:none;}
+    html.owl-w-locked,body.owl-w-locked{overflow:hidden;overscroll-behavior:none;height:100%;}
     .owl-w-msg{max-width:82%;padding:11px 14px;border-radius:14px;font-size:13.5px;line-height:1.5;flex-shrink:0;}
     .owl-w-msg.bot{background:#fff;border:1px solid #E4E9F0;align-self:flex-start;border-bottom-left-radius:4px;box-shadow:0 1px 3px rgba(0,0,0,.04);}
     .owl-w-msg.user{background:linear-gradient(135deg,#184A8C,#0B2A5B);color:#fff;align-self:flex-end;border-bottom-right-radius:4px;}
@@ -346,6 +346,9 @@
     launcherEl.classList.toggle("visible", willHide);
     // While the chat is open (willHide === false), lock the page behind it so
     // scroll/touch gestures never chain through to the dashboard underneath.
+    // Locking both <html> and <body> — some Android browsers/WebViews treat
+    // <html> as the actual scrolling element rather than <body>.
+    document.documentElement.classList.toggle("owl-w-locked", !willHide);
     document.body.classList.toggle("owl-w-locked", !willHide);
   }
 
@@ -394,6 +397,26 @@
         document.getElementById("owlWInput").focus();
       });
     });
+
+    // Robust scroll containment: overscroll-behavior:contain (set in the CSS
+    // above) already handles this on modern Chromium, but some older Android
+    // WebView builds support it inconsistently. This is the manual fallback —
+    // it only ever calls preventDefault() at the exact top/bottom edge of the
+    // chat, so momentum/inertial scrolling inside the chat is never touched.
+    let touchStartY = null;
+    chatEl.addEventListener("touchstart", (e) => { touchStartY = e.touches[0].clientY; }, { passive: true });
+    chatEl.addEventListener("touchmove", (e) => {
+      if (touchStartY == null) return;
+      const atTop = chatEl.scrollTop <= 0;
+      const atBottom = chatEl.scrollHeight - chatEl.scrollTop <= chatEl.clientHeight + 1;
+      const deltaY = e.touches[0].clientY - touchStartY;
+      if ((atTop && deltaY > 0) || (atBottom && deltaY < 0)) e.preventDefault();
+    }, { passive: false });
+    chatEl.addEventListener("wheel", (e) => {
+      const atTop = chatEl.scrollTop <= 0;
+      const atBottom = chatEl.scrollHeight - chatEl.scrollTop <= chatEl.clientHeight + 1;
+      if ((atTop && e.deltaY < 0) || (atBottom && e.deltaY > 0)) e.preventDefault();
+    }, { passive: false });
 
     loadDotLottieScript()
       .then(() => {
