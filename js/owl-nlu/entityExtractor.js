@@ -115,7 +115,24 @@
     const interestType = numberParser.containsKeyword(lower, COMPOUND_WORDS) ? "compound_annual" : null;
 
     const isCalcCommand = numberParser.containsKeyword(lower, CALC_WORDS);
-    const isAccountCommand = numberParser.containsKeyword(lower, ACCOUNT_WORDS) && principal == null && rate == null && !dates.length;
+    const hasAccountKeyword = numberParser.containsKeyword(lower, ACCOUNT_WORDS);
+    const hasNoNumericOrDateContent =
+      principal == null && rate == null && !dates.length &&
+      duration.months == null && duration.days == null && duration.years == null;
+
+    // A message with NO numbers, NO dates, and NO calc-related words at all —
+    // just plain text like "Ravi Patel" — has nothing else it could
+    // plausibly mean in this chatbot besides "look this person up", so it's
+    // treated as an account lookup even without an explicit "check"/"account"
+    // keyword. Without this, typing a bare name would incorrectly fall
+    // through to "what is the loan amount?" every time.
+    const trimmedRaw = rawText.trim();
+    const looksLikeBareName =
+      hasNoNumericOrDateContent && !isCalcCommand && trimmedRaw.length > 1 &&
+      /^[a-zA-Z\u0900-\u097F\u0A80-\u0AFF\s.'-]+$/.test(trimmedRaw) &&
+      trimmedRaw.split(/\s+/).length <= 5;
+
+    const isAccountCommand = (hasAccountKeyword && hasNoNumericOrDateContent) || looksLikeBareName;
 
     // Whatever's left over (after stripping numbers/dates/keywords) is our
     // best guess at a customer name, for account-lookup style messages.
