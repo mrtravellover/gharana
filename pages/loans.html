@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Loans — Gharana</title>
+<link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png">
+<link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png">
+<link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png">
+<link rel="manifest" href="/site.webmanifest">
+<meta name="theme-color" content="#0B2A5B">
+<link rel="preconnect" href="https://www.gstatic.com">
+<link rel="preconnect" href="https://firestore.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../css/style.css">
+</head>
+<body>
+<div id="stagedContent">
+  <div class="tabs" id="statusTabs">
+    <button data-status="active" class="active">Active</button>
+    <button data-status="released">Ready to release</button>
+    <button data-status="closed">Closed</button>
+    <button data-status="all">All</button>
+  </div>
+  <div class="search-bar">
+    <input type="text" id="searchInput" placeholder="Search by loan number, customer, mobile, or item name (e.g. chain, kada)…">
+    <button class="btn btn-secondary" onclick="exportLoansCsv()">⬇ Export CSV</button>
+    <a href="loan-create.html" class="btn btn-primary">+ New loan</a>
+  </div>
+
+  <div class="card" style="padding:0;overflow:hidden;">
+    <table>
+      <thead id="loansTableHead"><tr><th>Loan #</th><th>Customer</th><th>Pledged by</th><th>Date</th><th>Principal</th><th>Interest due</th><th>Status</th></tr></thead>
+      <tbody id="loanBody"><tr><td colspan="7" style="color:var(--ink-soft);padding:20px 0;">Loading…</td></tr></tbody>
+    </table>
+  </div>
+</div>
+
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-storage-compat.js"></script>
+<script src="../js/firebase-config.js"></script>
+<script src="../js/auth.js"></script>
+<script src="../js/i18n.js"></script>
+<script src="../js/nav.js"></script>
+<script src="../js/interest.js"></script>
+<script src="../js/loans.js"></script>
+</body>
+</html>
