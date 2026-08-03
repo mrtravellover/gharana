@@ -60,8 +60,9 @@
     .owl-w-topbar p{font-size:11.5px;margin:2px 0 0;opacity:.8;}
     .owl-w-status-dot{width:7px;height:7px;border-radius:50%;background:#10B981;display:inline-block;margin-right:5px;box-shadow:0 0 0 3px rgba(16,185,129,.25);}
     .owl-w-collapse-btn{background:rgba(255,255,255,.15);border:none;color:#fff;width:28px;height:28px;border-radius:50%;font-size:13px;cursor:pointer;flex-shrink:0;display:flex;align-items:center;justify-content:center;touch-action:manipulation;}
-    .owl-w-chat{padding:16px;display:flex;flex-direction:column;gap:12px;background:#F8FAFC;overflow-y:auto;flex:1;min-height:0;}
-    .owl-w-msg{max-width:82%;padding:11px 14px;border-radius:14px;font-size:13.5px;line-height:1.5;}
+    .owl-w-chat{padding:16px;display:flex;flex-direction:column;gap:12px;background:#F8FAFC;overflow-y:auto;flex:1;min-height:0;overscroll-behavior:contain;touch-action:pan-y;-webkit-overflow-scrolling:touch;}
+    body.owl-w-locked{overflow:hidden;overscroll-behavior:none;}
+    .owl-w-msg{max-width:82%;padding:11px 14px;border-radius:14px;font-size:13.5px;line-height:1.5;flex-shrink:0;}
     .owl-w-msg.bot{background:#fff;border:1px solid #E4E9F0;align-self:flex-start;border-bottom-left-radius:4px;box-shadow:0 1px 3px rgba(0,0,0,.04);}
     .owl-w-msg.user{background:linear-gradient(135deg,#184A8C,#0B2A5B);color:#fff;align-self:flex-end;border-bottom-right-radius:4px;}
     .owl-w-msg.bot.card{padding:0;overflow:hidden;max-width:92%;}
@@ -343,6 +344,9 @@
     const willHide = !phoneEl.classList.contains("owl-w-hidden");
     phoneEl.classList.toggle("owl-w-hidden", willHide);
     launcherEl.classList.toggle("visible", willHide);
+    // While the chat is open (willHide === false), lock the page behind it so
+    // scroll/touch gestures never chain through to the dashboard underneath.
+    document.body.classList.toggle("owl-w-locked", !willHide);
   }
 
   // ---- Real owl (Lottie), same defensive loading as login-owl.js ----
