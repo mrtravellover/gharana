@@ -60,11 +60,14 @@ function yearFraction(fromDate, toDate) {
 // the actual interest math uses yearFraction()/periodInterest() below.
 function formatDuration(days) {
   if (days <= 0) return "0 days";
-  const months = Math.floor(days / 30);
-  const remDays = days % 30;
+  const years = Math.floor(days / 365);
+  const afterYears = days % 365;
+  const months = Math.floor(afterYears / 30);
+  const remDays = afterYears % 30;
   const parts = [];
+  if (years > 0) parts.push(`${years} year${years === 1 ? "" : "s"}`);
   if (months > 0) parts.push(`${months} month${months === 1 ? "" : "s"}`);
-  if (remDays > 0 || months === 0) parts.push(`${remDays} day${remDays === 1 ? "" : "s"}`);
+  if (remDays > 0 || parts.length === 0) parts.push(`${remDays} day${remDays === 1 ? "" : "s"}`);
   return parts.join(", ");
 }
 
