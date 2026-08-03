@@ -288,6 +288,15 @@ tr.clickable{cursor:pointer;} tr.clickable:hover{background:var(--paper-soft);}
 @media (max-width:1024px){ .login-owl{width:250px;height:250px;} }
 @media (max-width:640px){ .login-owl{width:200px;height:200px;} }
 
+/* Laptop/desktop: side by side instead of stacked, so the page fits
+   without scrolling. Owl +20% (300→360), card -10% (380→342). */
+@media (min-width:1025px){
+  .login-wrap{flex-direction:row;align-items:center;justify-content:center;gap:48px;}
+  .login-owl-container{max-width:360px;margin:0;}
+  .login-owl{width:360px;height:360px;}
+  .login-card{max-width:342px;}
+}
+
 @media (prefers-reduced-motion: reduce){
   /* Belt-and-suspenders alongside the JS check — if reduced motion is on,
      the animation still renders (accessible, not hidden) but the JS module
