@@ -25,9 +25,9 @@
   --danger-soft: #FEE2E2;
   --radius: 10px;
   --shadow: 0 1px 2px rgba(11,42,91,.06), 0 4px 16px rgba(11,42,91,.06);
-  --font-display: "Fraunces", Georgia, serif;
-  --font-body: "Inter", -apple-system, "Segoe UI", Roboto, sans-serif;
-  --font-mono: "IBM Plex Mono", ui-monospace, monospace;
+  --font-display: "IBM Plex Sans", -apple-system, "Segoe UI", Roboto, sans-serif;
+  --font-body: "IBM Plex Sans", -apple-system, "Segoe UI", Roboto, sans-serif;
+  --font-mono: "IBM Plex Sans", -apple-system, "Segoe UI", Roboto, sans-serif;
 }
 
 #stagedContent{display:none;}
@@ -259,6 +259,51 @@ tr.clickable{cursor:pointer;} tr.clickable:hover{background:var(--paper-soft);}
 .empty-state{text-align:center;padding:50px 20px;color:var(--ink-soft);}
 .empty-state svg{opacity:.4;margin-bottom:10px;}
 
+/* ---------- Stepped form (New Loan redesign) ---------- */
+.step-card{padding:0;overflow:hidden;}
+.step-header{display:flex;align-items:flex-start;gap:14px;padding:20px 22px;cursor:pointer;user-select:none;}
+.step-badge{width:32px;height:32px;border-radius:8px;background:var(--primary);color:#fff;font-weight:700;font-size:15px;display:flex;align-items:center;justify-content:center;flex-shrink:0;}
+.step-title-wrap{flex:1;min-width:0;}
+.step-title-wrap h2{font-size:16px;margin:0;}
+.step-title-wrap p{font-size:13px;color:var(--ink-soft);margin:2px 0 0;}
+.step-chevron{flex-shrink:0;color:var(--ink-soft);transition:transform 0.2s ease;display:flex;align-items:center;padding-top:4px;}
+.step-card.collapsed .step-chevron{transform:rotate(180deg);}
+.step-body{padding:0 22px 22px;}
+.step-card.collapsed .step-body{display:none;}
+.step-header-actions{display:flex;align-items:center;gap:10px;margin-left:auto;flex-shrink:0;}
+
+.field-icon{position:relative;}
+.field-icon svg{position:absolute;left:12px;top:50%;transform:translateY(-50%);color:var(--ink-soft);pointer-events:none;}
+.field-icon input,.field-icon select{padding-left:38px;}
+.field-icon.currency svg,.field-icon.percent svg{font-size:15px;font-weight:700;}
+
+.field-with-count{position:relative;}
+.char-count{position:absolute;right:10px;bottom:8px;font-size:11px;color:var(--ink-soft);background:var(--paper);padding:0 2px;}
+
+.radio-card-group{display:flex;gap:10px;flex-wrap:wrap;}
+.radio-card{
+  flex:1;min-width:180px;display:flex;align-items:center;gap:10px;padding:12px 14px;
+  border:1.5px solid var(--line);border-radius:10px;cursor:pointer;transition:border-color 0.15s ease,background 0.15s ease;
+}
+.radio-card:hover{border-color:var(--secondary);}
+.radio-card.selected{border-color:var(--primary);background:var(--paper-soft);}
+.radio-card input[type="radio"]{width:auto;margin:0;flex-shrink:0;}
+.radio-card .radio-card-icon{width:30px;height:30px;border-radius:50%;background:var(--paper-soft);display:flex;align-items:center;justify-content:center;flex-shrink:0;color:var(--ink-soft);}
+.radio-card.selected .radio-card-icon{background:var(--primary);color:#fff;}
+.radio-card span.label{font-weight:600;font-size:14px;}
+
+.photo-capture-row{display:flex;align-items:center;gap:12px;flex-wrap:wrap;background:var(--paper-soft);border:1px dashed var(--line);border-radius:10px;padding:12px 14px;}
+.photo-capture-row .hint{margin:0;}
+
+.orn-table-head{display:none;}
+@media (min-width:761px){
+  .orn-table-head{display:flex;gap:10px;padding:0 12px 6px;font-size:11.5px;text-transform:uppercase;letter-spacing:.03em;color:var(--ink-soft);}
+  .orn-table-head span{flex:1;}
+  .orn-table-head span:nth-child(1){flex:1.3;}
+  .orn-table-head span:nth-child(4){max-width:80px;}
+  .orn-table-head span.action-col{flex:0 0 32px;}
+}
+
 .search-bar{display:flex;gap:10px;margin-bottom:16px;}
 .search-bar input{flex:1;}
 
@@ -355,14 +400,6 @@ tr.clickable{cursor:pointer;} tr.clickable:hover{background:var(--paper-soft);}
   font-size:13px;font-weight:600;transition:border-color 0.15s ease, background 0.15s ease;
 }
 .quick-action-btn:hover{border-color:var(--primary);background:var(--paper-soft);}
-
-.fab{
-  position:fixed;bottom:24px;right:24px;width:56px;height:56px;border-radius:50%;
-  background:var(--gold);display:flex;align-items:center;justify-content:center;
-  box-shadow:0 6px 20px rgba(11,42,91,.25);z-index:15;transition:transform 0.15s ease;
-}
-.fab:hover{transform:scale(1.06);}
-@media (max-width:860px){.fab{bottom:84px;right:18px;}}
 
 .activity-row{display:flex;align-items:center;gap:12px;padding:12px 0;border-bottom:1px solid var(--line);}
 .activity-row:last-child{border-bottom:none;}
