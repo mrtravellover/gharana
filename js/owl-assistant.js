@@ -229,6 +229,64 @@
     }
   }
 
+  // Searches for a name among loans' "pledged by someone else" field —
+  // covers the common case where the account is registered under one
+  // person (e.g. Kavish Shah) but the actual pledged items/loan belong to
+  // a family member (e.g. Vaishali), so a direct customer-name search alone
+  // wouldn't find her.
+  async function handlePledgedByFallback(name) {
+    try {
+      const lower = name.toLowerCase();
+      const allLoansSnap = await db.collection("loans").get();
+      const pledgedMatches = allLoansSnap.docs
+        .map((d) => ({ id: d.id, ...d.data() }))
+        .filter((l) => l.status !== "closed" && l.pledgedByMode === "other" && (l.pledgedByName || "").toLowerCase().includes(lower));
+
+      if (!pledgedMatches.length) {
+        addBotText(`I couldn't find a customer matching "<b>${escapeHtml(name)}</b>" — checked both registered account holders and "pledged by" names on loans. Try a full or partial name.`);
+        setOwlState("");
+        return;
+      }
+
+      const summaries = await Promise.all(
+        pledgedMatches.map(async (l) => {
+          const loanRef = db.collection("loans").doc(l.id);
+          const [dSnap, pSnap] = await Promise.all([loanRef.collection("disbursements").get(), loanRef.collection("payments").get()]);
+          const disbursements = dSnap.docs.map((d) => ({ id: d.id, ...d.data() }));
+          const payments = pSnap.docs.map((d) => ({ id: d.id, ...d.data() }));
+          return { loan: l, summary: calcLoanSummary(disbursements, payments) };
+        })
+      );
+
+      let totalPrincipal = 0, totalInterest = 0;
+      const rowsHtml = summaries
+        .map(({ loan, summary }) => {
+          totalPrincipal += summary.principalOutstanding;
+          totalInterest += summary.interestOutstanding;
+          return `<div class="owl-w-loan-item">
+            <div class="owl-w-row"><span class="l">${escapeHtml(loan.loanNumber || "Loan")}</span><span class="v">${escapeHtml(loan.status)}</span></div>
+            <div class="owl-w-row"><span class="l">Registered under</span><span class="v">${escapeHtml(loan.customerName || "—")}</span></div>
+            <div class="owl-w-row"><span class="l">Principal outstanding</span><span class="v">${fmtMoney(summary.principalOutstanding)}</span></div>
+            <div class="owl-w-row"><span class="l">Interest due today</span><span class="v owl-w-v-gold">${fmtMoney(summary.interestOutstanding)}</span></div>
+          </div>`;
+        })
+        .join("");
+
+      addCard(`
+        <div class="owl-w-card-head"><span class="t">${escapeHtml(pledgedMatches[0].pledgedByName)}</span><span class="s">Pledged under someone else's account — ${pledgedMatches.length} loan${pledgedMatches.length > 1 ? "s" : ""}</span></div>
+        <div class="owl-w-card-body">
+          ${rowsHtml}
+          <div class="owl-w-row" style="margin-top:6px;"><span class="l">Total payable today</span><span class="v owl-w-v-emerald">${fmtMoney(round2(totalPrincipal + totalInterest))}</span></div>
+        </div>
+      `);
+      setOwlState("happy");
+    } catch (err) {
+      console.error("owl-assistant pledged-by lookup failed:", err);
+      addBotText("Sorry, I couldn't reach the loan records just now — please try again.");
+      setOwlState("");
+    }
+  }
+
   async function handleAccountQuery(rawName, receiptNumber) {
     setOwlState("thinking");
 
@@ -263,8 +321,7 @@
         customers.find((c) => lower.includes((c.name || "").split(" ")[0].toLowerCase()));
 
       if (!match) {
-        addBotText(`I couldn't find a customer matching "<b>${escapeHtml(name)}</b>". Try a full or partial name.`);
-        setOwlState("");
+        await handlePledgedByFallback(name);
         return;
       }
 
