@@ -86,6 +86,9 @@
     .owl-w-row:last-child{border-bottom:none;}
     .owl-w-row .l{color:#6b7686;flex-shrink:0;}
     .owl-w-row .v{font-weight:700;color:#1a2333;text-align:right;}
+    .owl-w-link{color:#184A8C;text-decoration:underline;cursor:pointer;font-weight:700;}
+    .owl-w-link:hover{color:#0B2A5B;}
+    .owl-w-card-head .owl-w-link{color:#fff;}
     .owl-w-hint{font-size:11.5px;color:#94a3b8;margin-top:2px;}
     .owl-w-v-gold{color:#a8790f;}
     .owl-w-v-emerald{color:#10B981;}
@@ -214,7 +217,7 @@
       const summary = calcLoanSummary(disbursements, payments);
 
       addCard(`
-        <div class="owl-w-card-head"><span class="t">${escapeHtml(loan.loanNumber)}</span><span class="s">${escapeHtml(loan.customerName || "")} · ${escapeHtml(loan.status)}</span></div>
+        <div class="owl-w-card-head"><span class="t"><a class="owl-w-link" href="loan-detail.html?id=${loan.id}">${escapeHtml(loan.loanNumber)}</a></span><span class="s">${escapeHtml(loan.customerName || "")} · ${escapeHtml(loan.status)}</span></div>
         <div class="owl-w-card-body">
           <div class="owl-w-row"><span class="l">Principal outstanding</span><span class="v">${fmtMoney(summary.principalOutstanding)}</span></div>
           <div class="owl-w-row"><span class="l">Interest due today</span><span class="v owl-w-v-gold">${fmtMoney(summary.interestOutstanding)}</span></div>
@@ -264,8 +267,8 @@
           totalPrincipal += summary.principalOutstanding;
           totalInterest += summary.interestOutstanding;
           return `<div class="owl-w-loan-item">
-            <div class="owl-w-row"><span class="l">${escapeHtml(loan.loanNumber || "Loan")}</span><span class="v">${escapeHtml(loan.status)}</span></div>
-            <div class="owl-w-row"><span class="l">Registered under</span><span class="v">${escapeHtml(loan.customerName || "—")}</span></div>
+            <div class="owl-w-row"><span class="l"><a class="owl-w-link" href="loan-detail.html?id=${loan.id}">${escapeHtml(loan.loanNumber || "Loan")}</a></span><span class="v">${escapeHtml(loan.status)}</span></div>
+            <div class="owl-w-row"><span class="l">Registered under</span><span class="v">${loan.customerId ? `<a class="owl-w-link" href="customer-profile.html?id=${loan.customerId}">${escapeHtml(loan.customerName || "—")}</a>` : escapeHtml(loan.customerName || "—")}</span></div>
             <div class="owl-w-row"><span class="l">Principal outstanding</span><span class="v">${fmtMoney(summary.principalOutstanding)}</span></div>
             <div class="owl-w-row"><span class="l">Interest due today</span><span class="v owl-w-v-gold">${fmtMoney(summary.interestOutstanding)}</span></div>
           </div>`;
@@ -350,7 +353,7 @@
           totalPrincipal += summary.principalOutstanding;
           totalInterest += summary.interestOutstanding;
           return `<div class="owl-w-loan-item">
-            <div class="owl-w-row"><span class="l">${escapeHtml(loan.loanNumber || "Loan " + (i + 1))}</span><span class="v">${escapeHtml(loan.status)}</span></div>
+            <div class="owl-w-row"><span class="l"><a class="owl-w-link" href="loan-detail.html?id=${loan.id}">${escapeHtml(loan.loanNumber || "Loan " + (i + 1))}</a></span><span class="v">${escapeHtml(loan.status)}</span></div>
             <div class="owl-w-row"><span class="l">Principal outstanding</span><span class="v">${fmtMoney(summary.principalOutstanding)}</span></div>
             <div class="owl-w-row"><span class="l">Interest due today</span><span class="v owl-w-v-gold">${fmtMoney(summary.interestOutstanding)}</span></div>
           </div>`;
@@ -358,7 +361,7 @@
         .join("");
 
       addCard(`
-        <div class="owl-w-card-head"><span class="t">${escapeHtml(match.name)}</span><span class="s">${loanDocs.length} open loan${loanDocs.length > 1 ? "s" : ""}</span></div>
+        <div class="owl-w-card-head"><span class="t"><a class="owl-w-link" href="customer-profile.html?id=${match.id}">${escapeHtml(match.name)}</a></span><span class="s">${loanDocs.length} open loan${loanDocs.length > 1 ? "s" : ""}</span></div>
         <div class="owl-w-card-body">
           <div class="owl-w-row"><span class="l">Mobile</span><span class="v">${escapeHtml(match.mobile || "—")}</span></div>
           <div class="owl-w-row"><span class="l">Village</span><span class="v">${escapeHtml(match.address || "—")}</span></div>
