@@ -19,10 +19,46 @@ requireAuth(async () => {
   addOrnamentRow();
   document.getElementById("loanForm").addEventListener("submit", saveLoan);
   setupPledgedByField();
+  setupStepToggles();
+  setupRadioCards();
+  setupCharCounters();
   wirePhotoCapture("loanPhotoBtn", "loanPhotoPreview", (file) => { capturedLoanPhoto = file; });
   wirePhotoCapture("disbPhotoBtn", "disbPhotoPreview", (file) => { capturedDisbPhoto = file; });
   await loadDrafts();
 });
+
+// ---------- Collapsible step sections ----------
+function setupStepToggles() {
+  document.querySelectorAll(".step-header").forEach((header) => {
+    header.addEventListener("click", (e) => {
+      if (e.target.closest("button")) return; // don't collapse when clicking a button inside the header (e.g. "+ Add Item")
+      document.getElementById(header.dataset.toggle).classList.toggle("collapsed");
+    });
+  });
+}
+
+// ---------- "Ornament belongs to" radio-card visual selection ----------
+function setupRadioCards() {
+  const cards = document.querySelectorAll("#pledgedByCards .radio-card");
+  cards.forEach((card) => {
+    card.addEventListener("click", () => {
+      const radio = card.querySelector('input[type="radio"]');
+      radio.checked = true;
+      cards.forEach((c) => c.classList.toggle("selected", c === card));
+      radio.dispatchEvent(new Event("change", { bubbles: true }));
+    });
+  });
+}
+
+// ---------- Live character counters for the maxlength-limited fields ----------
+function setupCharCounters() {
+  [["loanRemarks", "loanRemarksCount"], ["itemsIdentityNote", "itemsIdentityNoteCount"], ["disbNotes", "disbNotesCount"]].forEach(([fieldId, countId]) => {
+    const field = document.getElementById(fieldId);
+    const count = document.getElementById(countId);
+    if (!field || !count) return;
+    field.addEventListener("input", () => { count.textContent = field.value.length; });
+  });
+}
 
 function setupPledgedByField() {
   const nameInput = document.getElementById("pledgedByName");
@@ -311,6 +347,7 @@ async function continueDraft(draftId) {
 
   const mode = d.pledgedByMode || "self";
   document.querySelector(`input[name="pledgedByMode"][value="${mode}"]`).checked = true;
+  document.querySelectorAll("#pledgedByCards .radio-card").forEach((c) => c.classList.toggle("selected", c.dataset.mode === mode));
   document.getElementById("pledgedByName").value = d.pledgedByName || "";
   document.getElementById("pledgedByMobile").value = d.pledgedByMobile || "";
   document.getElementById("pledgedByAadhaar").value = d.pledgedByAadhaar || "";
@@ -343,6 +380,11 @@ async function continueDraft(draftId) {
     addOrnamentRow();
   }
   updateOrnamentTotals();
+
+  ["loanRemarksCount", "itemsIdentityNoteCount", "disbNotesCount"].forEach((id) => {
+    const fieldId = id.replace("Count", "");
+    document.getElementById(id).textContent = document.getElementById(fieldId).value.length;
+  });
 
   toast("Draft loaded — continue filling it in");
   window.scrollTo({ top: 0, behavior: "smooth" });
