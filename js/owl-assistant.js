@@ -38,22 +38,30 @@
   const DOTLOTTIE_CDN = "https://unpkg.com/@lottiefiles/dotlottie-wc@0.9.4/dist/dotlottie-wc.js";
 
   const STYLE = `
-    .owl-w-btn{position:fixed;left:18px;bottom:18px;display:none;align-items:center;gap:10px;background:linear-gradient(135deg,#0B2A5B,#184A8C);color:#fff;padding:8px 20px 8px 8px;border:none;border-radius:30px;cursor:pointer;box-shadow:0 10px 28px rgba(11,42,91,.35);z-index:2000;font-size:14px;font-weight:700;font-family:inherit;touch-action:manipulation;}
+    .owl-w-btn{position:fixed;right:24px;bottom:24px;display:none;align-items:center;gap:10px;background:linear-gradient(135deg,#0B2A5B,#184A8C);color:#fff;padding:8px 20px 8px 8px;border:none;border-radius:30px;cursor:pointer;box-shadow:0 10px 28px rgba(11,42,91,.35);z-index:2000;font-size:14px;font-weight:700;font-family:inherit;touch-action:manipulation;}
     .owl-w-btn.visible{display:inline-flex;}
-    @media (max-width:860px){ .owl-w-btn{ bottom:96px; } } /* clears the floating mobile nav pill + FAB */
-    .owl-w-launcher-owl{width:34px;height:34px;border-radius:50%;background:#fff;display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0;}
+    @media (max-width:860px){ .owl-w-btn{ bottom:96px;right:18px; } } /* clears the floating mobile nav pill */
+    .owl-w-launcher-owl{width:34px;height:34px;border-radius:50%;background:#fff;flex-shrink:0;position:relative;overflow:hidden;}
+    .owl-w-launcher-owl .owl-w-launcher-lottie{width:100%;height:100%;display:block;}
+    .owl-w-launcher-owl .owl-w-launcher-fallback{position:absolute;inset:0;display:none;align-items:center;justify-content:center;font-size:18px;}
+    /* Desktop/laptop: just the bare owl, no pill/circle/label — the FAB's old spot */
+    @media (min-width:861px){
+      .owl-w-btn{background:none;box-shadow:none;padding:0;border-radius:0;width:64px;height:64px;justify-content:center;}
+      .owl-w-btn .owl-w-launcher-owl{width:64px;height:64px;background:none;border-radius:0;filter:drop-shadow(0 6px 14px rgba(11,42,91,.35));}
+      .owl-w-btn .owl-w-launcher-label{display:none;}
+    }
     .owl-w-phone{
-      position:fixed;left:18px;bottom:18px;width:380px;max-width:calc(100vw - 36px);
+      position:fixed;right:24px;bottom:24px;width:380px;max-width:calc(100vw - 36px);
       max-height:min(600px, calc(100vh - 100px));
       background:#fff;border-radius:20px;box-shadow:0 20px 60px rgba(11,42,91,.3);
       display:flex;flex-direction:column;border:1px solid #E4E9F0;
       font-family:inherit;z-index:2000;overflow:hidden;
     }
-    @media (max-width:860px){ .owl-w-phone{ bottom:96px; } }
-    @media (max-width:480px){ .owl-w-phone{ left:10px; width:calc(100vw - 20px); } }
+    @media (max-width:860px){ .owl-w-phone{ bottom:96px;right:18px; } }
+    @media (max-width:480px){ .owl-w-phone{ right:10px; width:calc(100vw - 20px); } }
     .owl-w-phone.owl-w-hidden{display:none;}
-    .owl-w-topbar{background:linear-gradient(135deg,#0B2A5B,#184A8C);color:#fff;padding:12px 16px;display:flex;align-items:center;gap:12px;flex-shrink:0;cursor:pointer;touch-action:manipulation;}
-    .owl-w-avatar-wrap{width:56px;height:56px;flex-shrink:0;position:relative;}
+    .owl-w-topbar{background:linear-gradient(135deg,#0B2A5B,#184A8C);color:#fff;padding:10px 16px;display:flex;align-items:center;gap:10px;flex-shrink:0;cursor:pointer;touch-action:manipulation;}
+    .owl-w-avatar-wrap{width:88px;height:88px;flex-shrink:0;position:relative;}
     .owl-w-avatar{width:100%;height:100%;}
     .owl-w-fallback{position:absolute;top:0;left:0;}
     .owl-w-topbar h1{font-size:15px;margin:0;font-weight:700;color:#fff;font-family:var(--font-body, inherit);}
@@ -129,7 +137,11 @@
         </div>
       </div>
       <button class="owl-w-btn visible" id="owlWLauncher" type="button">
-        <span class="owl-w-launcher-owl">🦉</span> Gharana Assistant
+        <span class="owl-w-launcher-owl">
+          <dotlottie-wc class="owl-w-launcher-lottie" id="owlWLauncherLottie" src="${LOTTIE_OWL_SRC}" autoplay loop></dotlottie-wc>
+          <span class="owl-w-launcher-fallback" id="owlWLauncherFallback">🦉</span>
+        </span>
+        <span class="owl-w-launcher-label">Gharana Assistant</span>
       </button>
     `;
     document.body.appendChild(wrap);
@@ -426,8 +438,24 @@
           if (reducedMotion) { try { owlEl.loop = false; owlEl.autoplay = false; if (typeof owlEl.pause === "function") owlEl.pause(); } catch (e) {} }
         }, { once: true });
         owlEl.addEventListener("error", () => { owlEl.style.display = "none"; owlFallbackEl.style.display = "block"; }, { once: true });
+
+        // The launcher's own Lottie instance is purely decorative (no marker/state
+        // control needed) — just fall back to the emoji if it fails to load.
+        const launcherLottie = document.getElementById("owlWLauncherLottie");
+        const launcherFallback = document.getElementById("owlWLauncherFallback");
+        if (launcherLottie && launcherFallback) {
+          launcherLottie.addEventListener("error", () => { launcherLottie.style.display = "none"; launcherFallback.style.display = "flex"; }, { once: true });
+          if (reducedMotion) { try { launcherLottie.loop = false; launcherLottie.autoplay = false; } catch (e) {} }
+        }
       })
-      .catch(() => { owlEl.style.display = "none"; owlFallbackEl.style.display = "block"; });
+      .catch(() => {
+        owlEl.style.display = "none";
+        owlFallbackEl.style.display = "block";
+        const launcherLottie = document.getElementById("owlWLauncherLottie");
+        const launcherFallback = document.getElementById("owlWLauncherFallback");
+        if (launcherLottie) launcherLottie.style.display = "none";
+        if (launcherFallback) launcherFallback.style.display = "flex";
+      });
 
     addBotText('Hoo-hoo! 🦉 Ask me to <b>check a customer\'s account</b>, or give me a quick calc like <b>"10000 2% 12-08-2024"</b>.');
   }
