@@ -9,6 +9,8 @@
 <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png">
 <link rel="manifest" href="/site.webmanifest">
 <meta name="theme-color" content="#0B2A5B">
+<link rel="preconnect" href="https://www.gstatic.com">
+<link rel="preconnect" href="https://firestore.googleapis.com">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Fraunces:wght@500;600&family=Inter:wght@400;500;600;700&family=IBM+Plex+Mono:wght@500&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="css/style.css">
@@ -34,6 +36,16 @@
 </script>
 
 <div class="login-wrap">
+  <div class="login-owl-container" id="loginOwlContainer">
+    <dotlottie-wc
+      id="loginOwl"
+      class="login-owl"
+      src="https://lottie.host/c7668bc7-1b61-4958-a268-68939d2ba27a/dhuKIcqJ81.lottie"
+      autoplay
+      loop
+      aria-hidden="true">
+    </dotlottie-wc>
+  </div>
   <div class="login-card">
     <img src="assets/logo-navy.png" alt="Gharana — Mortgage Management" style="width:100%;max-width:220px;display:block;margin:0 auto 18px;">
 
@@ -63,6 +75,7 @@
 <script src="js/i18n.js"></script>
 <script src="js/nav.js"></script>
 <script src="js/auth.js"></script>
+<script src="js/login-owl.js"></script>
 <script>document.addEventListener("DOMContentLoaded", () => applyTranslations());</script>
 <script>
   // Real startup work: resolve auth state, then (if signed in) warm up a
