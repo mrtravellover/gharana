@@ -23,89 +23,168 @@
   </div>
 
   <form id="loanForm">
-    <div class="card">
-      <h2>1. Customer &amp; loan details</h2>
-      <div class="divider-dashed"></div>
-      <div class="field">
-        <label>Customer *</label>
-        <select id="customerSelect" required><option value="">Select customer…</option></select>
-        <div class="hint">Can't find them? <a href="customers.html?new=1">Add a new customer first →</a></div>
-      </div>
-      <div class="grid grid-2">
-        <div class="field"><label>Loan / receipt number *</label><input type="text" id="loanNumber" required placeholder="e.g. SJ-2026-014"></div>
-        <div class="field"><label>Loan date *</label><input type="date" id="loanDate" required></div>
-      </div>
-      <div class="field">
-        <label>Ornament belongs to *</label>
-        <div style="display:flex;gap:16px;align-items:center;margin-bottom:8px;">
-          <label style="display:flex;align-items:center;gap:6px;font-weight:500;color:var(--ink);"><input type="radio" name="pledgedByMode" value="self" checked style="width:auto;"> Self (the account holder)</label>
-          <label style="display:flex;align-items:center;gap:6px;font-weight:500;color:var(--ink);"><input type="radio" name="pledgedByMode" value="other" style="width:auto;"> Someone else</label>
+    <div class="card step-card" id="step1Card">
+      <div class="step-header" data-toggle="step1Card">
+        <div class="step-badge">1</div>
+        <div class="step-title-wrap">
+          <h2>Customer &amp; Loan Details</h2>
+          <p>Select customer and enter loan basic information</p>
         </div>
-        <input type="text" id="pledgedByName" placeholder="e.g. Ramesh" style="display:none;margin-bottom:10px;">
-        <div class="grid grid-2" id="pledgedByExtra" style="display:none;">
-          <div class="field"><label>Their mobile number</label><input type="tel" id="pledgedByMobile" placeholder="9876543210"></div>
-          <div class="field"><label>Their Aadhaar number</label><input type="text" id="pledgedByAadhaar" maxlength="12" placeholder="XXXX XXXX XXXX"></div>
+        <div class="step-chevron">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 15l-6-6-6 6"/></svg>
         </div>
-        <div class="field" id="pledgedByAddressField" style="display:none;">
-          <label>Their address / village</label><input type="text" id="pledgedByAddress">
-        </div>
-        <div class="hint" id="pledgedByHint"></div>
       </div>
-      <div class="field"><label>Remarks</label><textarea id="loanRemarks" placeholder="Any notes about this loan…"></textarea></div>
-      <div class="field">
-        <label>Customer photo (at time of this loan)</label>
-        <button type="button" class="btn btn-secondary" id="loanPhotoBtn">📷 Take photo</button>
-        <div id="loanPhotoPreview"></div>
+      <div class="step-body">
+        <div class="field field-icon">
+          <label>Customer *</label>
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2M12 11a4 4 0 100-8 4 4 0 000 8z"/></svg>
+          <select id="customerSelect" required><option value="">Select customer…</option></select>
+          <div class="hint">Can't find them? <a href="customers.html?new=1">Add a new customer first →</a></div>
+        </div>
+        <div class="grid grid-2">
+          <div class="field field-icon">
+            <label>Loan / Receipt Number *</label>
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><path d="M14 2v6h6"/></svg>
+            <input type="text" id="loanNumber" required placeholder="e.g. SJ-2026-014">
+          </div>
+          <div class="field field-icon">
+            <label>Loan Date *</label>
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></svg>
+            <input type="date" id="loanDate" required>
+          </div>
+        </div>
+        <div class="field">
+          <label>Ornament Belongs To *</label>
+          <div class="radio-card-group" id="pledgedByCards">
+            <label class="radio-card selected" data-mode="self">
+              <input type="radio" name="pledgedByMode" value="self" checked>
+              <span class="radio-card-icon"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2M12 11a4 4 0 100-8 4 4 0 000 8z"/></svg></span>
+              <span class="label">Self (the account holder)</span>
+            </label>
+            <label class="radio-card" data-mode="other">
+              <input type="radio" name="pledgedByMode" value="other">
+              <span class="radio-card-icon"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2M9 11a4 4 0 100-8 4 4 0 000 8zM23 21v-2a4 4 0 00-3-3.87M16 3.13a4 4 0 010 7.75"/></svg></span>
+              <span class="label">Someone else</span>
+            </label>
+          </div>
+          <input type="text" id="pledgedByName" placeholder="e.g. Ramesh" style="display:none;margin-top:10px;margin-bottom:10px;">
+          <div class="grid grid-2" id="pledgedByExtra" style="display:none;">
+            <div class="field"><label>Their mobile number</label><input type="tel" id="pledgedByMobile" placeholder="9876543210"></div>
+            <div class="field"><label>Their Aadhaar number</label><input type="text" id="pledgedByAadhaar" maxlength="12" placeholder="XXXX XXXX XXXX"></div>
+          </div>
+          <div class="field" id="pledgedByAddressField" style="display:none;">
+            <label>Their address / village</label><input type="text" id="pledgedByAddress">
+          </div>
+          <div class="hint" id="pledgedByHint" style="margin-top:6px;"></div>
+        </div>
+        <div class="field field-with-count">
+          <label>Remarks</label>
+          <textarea id="loanRemarks" maxlength="300" placeholder="Any notes about this loan…"></textarea>
+          <span class="char-count"><span id="loanRemarksCount">0</span>/300</span>
+        </div>
+        <div class="field">
+          <label>Customer Photo (at time of this loan)</label>
+          <div class="photo-capture-row">
+            <button type="button" class="btn btn-secondary" id="loanPhotoBtn">📷 Take Photo</button>
+            <span class="hint">Capture customer photo for records</span>
+          </div>
+          <div id="loanPhotoPreview"></div>
+        </div>
       </div>
     </div>
 
-    <div class="card" style="margin-top:14px;">
-      <div class="section-head">
-        <h2>2. Ornaments pledged</h2>
-        <button type="button" class="btn btn-secondary btn-sm" onclick="addOrnamentRow()">+ Add item</button>
+    <div class="card step-card" id="step2Card" style="margin-top:14px;">
+      <div class="step-header" data-toggle="step2Card">
+        <div class="step-badge">2</div>
+        <div class="step-title-wrap">
+          <h2>Ornaments Pledged</h2>
+          <p>Add details of ornaments kept as security</p>
+        </div>
+        <div class="step-header-actions">
+          <button type="button" class="btn btn-secondary btn-sm" style="border-color:var(--gold);color:var(--gold-deep);" onclick="event.stopPropagation();addOrnamentRow();">+ Add Item</button>
+        </div>
+        <div class="step-chevron">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 15l-6-6-6 6"/></svg>
+        </div>
       </div>
-      <div class="divider-dashed"></div>
-      <div id="ornamentRows"></div>
-      <div class="hint" id="ornamentTotals" style="margin-top:8px;font-weight:600;"></div>
-      <div class="field" style="margin-top:12px;">
-        <label>Locker note (which bag/pack these items are kept in)</label>
-        <input type="text" id="itemsIdentityNote" placeholder="e.g. Blue pack, white bag, tag #3">
+      <div class="step-body">
+        <div class="orn-table-head">
+          <span>Item</span><span>Metal</span><span>Weight (g)</span><span>Qty</span><span>Purity</span><span>Category</span><span class="action-col"></span>
+        </div>
+        <div id="ornamentRows"></div>
+        <div class="hint" id="ornamentTotals" style="margin-top:8px;font-weight:600;"></div>
+        <div class="field field-with-count" style="margin-top:12px;">
+          <label>Locker note (which bag/pack these items are kept in)</label>
+          <input type="text" id="itemsIdentityNote" maxlength="200" placeholder="e.g. Blue pack, white bag, tag #3">
+          <span class="char-count"><span id="itemsIdentityNoteCount">0</span>/200</span>
+        </div>
       </div>
     </div>
 
-    <div class="card" style="margin-top:14px;">
-      <h2>3. First disbursement</h2>
-      <div class="divider-dashed"></div>
-      <div class="grid grid-3">
-        <div class="field"><label>Amount given (₹) *</label><input type="number" id="disbAmount" required min="1" step="1"></div>
-        <div class="field"><label>Monthly interest rate (%) *</label><input type="number" id="disbRate" required min="0" step="0.1" placeholder="e.g. 2.5"></div>
-        <div class="field"><label>Date given *</label><input type="date" id="disbDate" required></div>
+    <div class="card step-card" id="step3Card" style="margin-top:14px;">
+      <div class="step-header" data-toggle="step3Card">
+        <div class="step-badge">3</div>
+        <div class="step-title-wrap">
+          <h2>First Disbursement</h2>
+          <p>Enter initial loan disbursement details</p>
+        </div>
+        <div class="step-chevron">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 15l-6-6-6 6"/></svg>
+        </div>
       </div>
-      <div class="field">
-        <label>Interest type</label>
-        <select id="disbInterestType">
-          <option value="simple">Simple (standard)</option>
-          <option value="compound">Compounding (monthly)</option>
+      <div class="step-body">
+        <div class="grid grid-3">
+          <div class="field field-icon currency">
+            <label>Amount Given (₹) *</label>
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 3h12M6 8h12M6 13l8.5 8M6 13h3c3 0 5-1.5 5-5"/></svg>
+            <input type="number" id="disbAmount" required min="1" step="1" placeholder="Enter amount">
+          </div>
+          <div class="field field-icon percent">
+            <label>Monthly Interest Rate (%) *</label>
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 5L5 19M7.5 7.5h.01M16.5 16.5h.01"/><circle cx="7.5" cy="7.5" r="2.5"/><circle cx="16.5" cy="16.5" r="2.5"/></svg>
+            <input type="number" id="disbRate" required min="0" step="0.1" placeholder="e.g. 2.5">
+          </div>
+          <div class="field field-icon">
+            <label>Date Given *</label>
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></svg>
+            <input type="date" id="disbDate" required>
+          </div>
+        </div>
+        <div class="field">
+          <label>Interest Type</label>
+          <select id="disbInterestType">
+            <option value="simple">Simple (standard)</option>
+            <option value="compound">Compounding (monthly)</option>
             <option value="compound_annual">Compounding (annually)</option>
-        </select>
-        <div class="hint">You can change the rate later from the loan page — e.g. if you agreed 2% at lending but want to charge 2.5% at collection.</div>
-      </div>
-      <div class="grid grid-2">
-        <div class="field"><label>Reason for amount</label><input type="text" id="disbReason" placeholder="e.g. shop expenses"></div>
-        <div class="field"><label>Collected by (family member)</label><input type="text" id="disbCollector" placeholder="e.g. Kavish"></div>
-      </div>
-      <div class="field"><label>Notes</label><textarea id="disbNotes"></textarea></div>
-      <div class="field">
-        <label>Photo at disbursement</label>
-        <button type="button" class="btn btn-secondary" id="disbPhotoBtn">📷 Take photo</button>
-        <div id="disbPhotoPreview"></div>
+          </select>
+          <div class="hint">ⓘ You can change the rate later from the loan page — e.g. if you agreed 2% at lending but want to charge 2.5% at collection.</div>
+        </div>
+        <div class="grid grid-2">
+          <div class="field"><label>Reason for Amount</label><input type="text" id="disbReason" placeholder="e.g. shop expenses"></div>
+          <div class="field"><label>Collected by (Family Member)</label><input type="text" id="disbCollector" placeholder="e.g. Kavish"></div>
+        </div>
+        <div class="field field-with-count">
+          <label>Notes</label>
+          <textarea id="disbNotes" maxlength="300" placeholder="Add any additional notes…"></textarea>
+          <span class="char-count"><span id="disbNotesCount">0</span>/300</span>
+        </div>
+        <div class="field">
+          <label>Photo at Disbursement</label>
+          <div class="photo-capture-row">
+            <button type="button" class="btn btn-secondary" id="disbPhotoBtn">📷 Take Photo</button>
+            <span class="hint">Capture disbursement receipt or related photo</span>
+          </div>
+          <div id="disbPhotoPreview"></div>
+        </div>
       </div>
     </div>
 
-    <div style="display:flex;gap:10px;margin-top:16px;flex-wrap:wrap;">
-      <a href="loans.html" class="btn btn-secondary">Cancel</a>
-      <button type="button" class="btn btn-secondary" id="saveDraftBtn" onclick="saveDraft()">💾 Save as draft</button>
-      <button type="submit" class="btn btn-primary" id="saveLoanBtn">Create loan</button>
+    <div style="display:flex;gap:10px;margin-top:16px;flex-wrap:wrap;align-items:center;justify-content:space-between;">
+      <a href="loans.html" class="btn btn-secondary">✕ Cancel</a>
+      <div style="display:flex;gap:10px;flex-wrap:wrap;">
+        <button type="button" class="btn btn-secondary" id="saveDraftBtn" onclick="saveDraft()">💾 Save as Draft</button>
+        <button type="submit" class="btn btn-primary" id="saveLoanBtn">Save &amp; Continue →</button>
+      </div>
     </div>
   </form>
 </div>
@@ -126,7 +205,7 @@
       </div>
       <div class="field" style="margin-bottom:0;">
         <label>Weight (g)</label>
-        <input type="number" class="orn-weight" min="0" step="0.01" required>
+        <input type="number" class="orn-weight" min="0" step="0.01" required placeholder="0.000">
       </div>
       <div class="field" style="max-width:80px;margin-bottom:0;">
         <label>Qty</label>
@@ -140,7 +219,7 @@
         <label>Category</label>
         <input type="text" class="orn-category" readonly placeholder="—">
       </div>
-      <button type="button" class="btn btn-ghost btn-sm remove" onclick="this.closest('[data-row]').remove(); updateOrnamentTotals();">✕</button>
+      <button type="button" class="btn btn-ghost btn-sm remove" onclick="this.closest('[data-row]').remove(); updateOrnamentTotals();">🗑</button>
     </div>
   </div>
 </template>
