@@ -15,10 +15,14 @@ requireAuth(async () => {
   renderShell({ active: "reports", title: "Reports" });
 
   document.querySelectorAll("#periodTabs button").forEach((b) =>
-    b.addEventListener("click", () => {
+    b.addEventListener("click", async () => {
       document.querySelectorAll("#periodTabs button").forEach((x) => x.classList.remove("active"));
       b.classList.add("active");
       mode = b.dataset.mode;
+      const tabButtons = document.querySelectorAll("#periodTabs button");
+      tabButtons.forEach((x) => (x.disabled = true));
+      await ensureWindowCovers(requiredWindowStart(mode));
+      tabButtons.forEach((x) => (x.disabled = false));
       buildPeriods();
     })
   );
@@ -33,23 +37,89 @@ requireAuth(async () => {
   document.getElementById("periodPicker").addEventListener("change", () => { renderEntries(); updateExportPeriodLabel(); });
   document.getElementById("exportCurrentPeriodOnly").addEventListener("change", updateExportPeriodLabel);
 
-  await loadData();
+  await ensureWindowCovers(requiredWindowStart(mode));
+  buildPeriods();
   await loadMetalSummary();
 });
 
+/* ============================================================
+   DATA LOADING — designed to scale to hundreds/thousands of loans.
+   ============================================================
+   The old approach fetched EVERY loan and its full disbursement +
+   payment history, every time the page loaded — fine for a handful
+   of test loans, but with 1,000+ loans that's potentially tens of
+   thousands of document reads (and Firestore bills you per read) on
+   every single visit, even if all you want is this month's numbers.
+
+   New approach:
+   1. Use a collection-group query (across every loan's payments/
+      disbursements subcollections at once) filtered by date, to
+      cheaply DISCOVER which loans had any activity in the window
+      being viewed — without touching loans that had none.
+   2. Only for THOSE loans, fetch their full history and run the
+      existing calcLoanSummary() waterfall — this part can't be
+      shortcut, because a payment's interest-vs-principal split
+      genuinely depends on everything that happened on that loan
+      before it, not just what's in the visible date window.
+   3. Cache which loans have already been fully processed, so
+      switching between period tabs never re-fetches the same loan
+      twice in one visit.
+   4. Only widen the window (fetch further back) when the currently
+      selected view actually needs it — e.g. switching to the
+      Yearly tab, or exporting the complete history.
+   ============================================================ */
+
 let allDisbEvents = [], allPayEvents = [];
+let loadedWindowStart = null; // earliest date currently covered by the two arrays above
+let processedLoanIds = new Set();
+let loadingWindow = false;
 
-async function loadData() {
-  const loanSnap = await db.collection("loans").get();
-  allDisbEvents = [];
-  allPayEvents = [];
+// How far back the current view actually needs data, based on the trend
+// chart's period count for this granularity — with a little buffer so nothing
+// gets cut off right at the edge.
+function requiredWindowStart(forMode) {
+  const cfg = PERIOD_CONFIG[forMode];
+  const daysPerUnit = { daily: 1, monthly: 31, quarterly: 92, halfyearly: 183, yearly: 366 }[forMode];
+  const daysBack = cfg.trendCount * daysPerUnit + 31;
+  return new Date(Date.now() - daysBack * 86400000);
+}
 
-  await Promise.all(loanSnap.docs.map(async (doc) => {
-    const loan = { id: doc.id, ...doc.data() };
-    const [disbSnap, paySnap] = await Promise.all([
-      db.collection("loans").doc(loan.id).collection("disbursements").get(),
-      db.collection("loans").doc(loan.id).collection("payments").get(),
+// A deliberately very old anchor, used only when exporting the complete
+// history — this is the one case that genuinely needs everything, ever.
+function beginningOfTime() {
+  return new Date(2000, 0, 1);
+}
+
+async function ensureWindowCovers(targetStart) {
+  if (loadedWindowStart && targetStart >= loadedWindowStart) return; // already covered, nothing to do
+  await loadDataForWindow(targetStart);
+}
+
+async function loadDataForWindow(windowStart) {
+  loadingWindow = true;
+  const tsStart = firebase.firestore.Timestamp.fromDate(windowStart);
+
+  // Step 1 — cheap discovery: which loans have activity in this window?
+  const [disbGroupSnap, payGroupSnap] = await Promise.all([
+    db.collectionGroup("disbursements").where("date", ">=", tsStart).get(),
+    db.collectionGroup("payments").where("date", ">=", tsStart).get(),
+  ]);
+  const relevantLoanIds = new Set();
+  disbGroupSnap.docs.forEach((d) => relevantLoanIds.add(d.ref.parent.parent.id));
+  payGroupSnap.docs.forEach((d) => relevantLoanIds.add(d.ref.parent.parent.id));
+
+  // Step 2 — only fetch full history for loans we haven't already processed.
+  const newLoanIds = [...relevantLoanIds].filter((id) => !processedLoanIds.has(id));
+
+  await Promise.all(newLoanIds.map(async (loanId) => {
+    const loanRef = db.collection("loans").doc(loanId);
+    const [loanDoc, disbSnap, paySnap] = await Promise.all([
+      loanRef.get(),
+      loanRef.collection("disbursements").get(),
+      loanRef.collection("payments").get(),
     ]);
+    if (!loanDoc.exists) return;
+    const loan = { id: loanId, ...loanDoc.data() };
     const disbursements = disbSnap.docs.map((d) => d.data());
     const paymentsRaw = paySnap.docs.map((d) => d.data());
     const summary = calcLoanSummary(disbursements, paymentsRaw);
@@ -60,9 +130,11 @@ async function loadData() {
     summary.paymentBreakdown.forEach((p) => {
       allPayEvents.push({ date: p.date, amount: p.amount, interestPortion: p.interestPortion, principalPortion: p.principalPortion, loanNumber: loan.loanNumber, customerName: loan.customerName });
     });
+    processedLoanIds.add(loanId);
   }));
 
-  buildPeriods();
+  loadedWindowStart = windowStart;
+  loadingWindow = false;
 }
 
 async function loadMetalSummary() {
@@ -207,11 +279,12 @@ function renderEntries() {
 }
 
 // ---------- CSV export ----------
-// Each export respects the "current period only" checkbox: unchecked (the
-// default) exports the complete all-time history; checked, it exports only
-// whatever period is currently selected via the tabs + dropdown above —
-// that's the "sort by month/year" the exports use, reusing the same
-// period system already on this page rather than a separate picker.
+// Each export respects the "current period only" checkbox: checked, it
+// exports only whatever period is currently selected (already loaded, no
+// extra reads needed). Unchecked — the "complete history" default — now
+// explicitly widens the loaded window all the way back before exporting,
+// since that's the one case that genuinely needs every record ever, and
+// only happens when you actually click an export button, not on every visit.
 function csvCell(v) {
   const s = String(v == null ? "" : v);
   return `"${s.replace(/"/g, '""')}"`;
@@ -248,21 +321,41 @@ function scopedEvents(allEvents, entriesKey) {
   return p ? p[entriesKey] : [];
 }
 
-function exportMoneyOutCSV() {
+// If exporting "complete history", makes sure everything has actually been
+// loaded first (widens the window back to the beginning) before the export
+// functions read from allDisbEvents/allPayEvents — otherwise a complete
+// export taken before the user has browsed older periods could silently
+// miss older records that were never fetched yet.
+async function ensureCompleteHistoryIfNeeded(btn) {
+  const onlyCurrent = document.getElementById("exportCurrentPeriodOnly").checked;
+  if (onlyCurrent) return;
+  const original = btn.textContent;
+  btn.disabled = true;
+  btn.textContent = "Loading complete history…";
+  await ensureWindowCovers(beginningOfTime());
+  buildPeriods();
+  btn.disabled = false;
+  btn.textContent = original;
+}
+
+async function exportMoneyOutCSV(btn) {
+  await ensureCompleteHistoryIfNeeded(btn);
   const events = [...scopedEvents(allDisbEvents, "outEntries")].sort((a, b) => toJsDate(a.date) - toJsDate(b.date));
   const headers = ["Date", "Loan Number", "Customer", "Amount Given"];
   const rows = events.map((e) => [fmtDate(e.date), e.loanNumber, e.customerName, e.amount]);
   downloadCsv("money-out", headers, rows);
 }
 
-function exportMoneyInCSV() {
+async function exportMoneyInCSV(btn) {
+  await ensureCompleteHistoryIfNeeded(btn);
   const events = [...scopedEvents(allPayEvents, "inEntries")].sort((a, b) => toJsDate(a.date) - toJsDate(b.date));
   const headers = ["Date", "Loan Number", "Customer", "Amount Collected", "Interest Portion", "Principal Portion"];
   const rows = events.map((e) => [fmtDate(e.date), e.loanNumber, e.customerName, e.amount, e.interestPortion, e.principalPortion]);
   downloadCsv("money-in", headers, rows);
 }
 
-function exportInterestEarnedCSV() {
+async function exportInterestEarnedCSV(btn) {
+  await ensureCompleteHistoryIfNeeded(btn);
   const events = [...scopedEvents(allPayEvents, "inEntries")].sort((a, b) => toJsDate(a.date) - toJsDate(b.date));
   const headers = ["Date", "Loan Number", "Customer", "Interest Earned"];
   const rows = events.filter((e) => Number(e.interestPortion) > 0).map((e) => [fmtDate(e.date), e.loanNumber, e.customerName, e.interestPortion]);
