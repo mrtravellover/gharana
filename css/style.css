@@ -171,8 +171,6 @@ a{color:var(--secondary);}
 }
 .sidebar-toggle:hover{color:#fff;}
 .sidebar .brand{padding:0 20px 18px;border-bottom:1px solid rgba(255,255,255,.1);margin-bottom:10px;}
-#themeToggle{padding:0 20px 14px;}
-.sidebar.collapsed #themeToggle{display:none;}
 .theme-toggle-group{display:flex;gap:4px;border-radius:8px;padding:3px;background:var(--paper-soft);border:1px solid var(--line);}
 .theme-toggle-btn{
   flex:1;background:none;border:none;color:var(--ink-soft);cursor:pointer;padding:7px 0;border-radius:6px;
@@ -180,12 +178,6 @@ a{color:var(--secondary);}
 }
 .theme-toggle-btn:hover{color:var(--ink);}
 .theme-toggle-btn.active{background:var(--gold);color:var(--primary);}
-/* The sidebar is always dark navy regardless of the app's light/dark theme
-   setting, so it needs its own fixed colors here rather than the
-   theme-adaptive ones above (which would go light-on-light in light mode). */
-.sidebar .theme-toggle-group{background:rgba(255,255,255,.06);border-color:transparent;}
-.sidebar .theme-toggle-btn{color:#8FA5C4;}
-.sidebar .theme-toggle-btn:hover{color:#fff;}
 .sidebar nav a{
   display:flex;align-items:center;gap:10px;padding:11px 20px;color:#A9BFDD;text-decoration:none;font-size:14px;
   border-left:3px solid transparent;transition:background 0.15s ease, color 0.15s ease, border-color 0.15s ease;
