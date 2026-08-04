@@ -55,7 +55,6 @@ function renderShell({ active, title }) {
         <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" id="sidebarToggleIcon"><path d="M15 18l-6-6 6-6"/></svg>
         <span class="nav-label">Collapse</span>
       </button>
-      <div id="themeToggle"></div>
       <div class="user">
         ${t("signed_in_as")}<br><strong style="color:#E8EEF7">${user ? user.email : ""}</strong>
         <div style="display:flex;gap:10px;margin-top:4px;">
@@ -82,7 +81,6 @@ function renderShell({ active, title }) {
   document.body.insertAdjacentHTML("afterbegin", shellHTML);
   hideSplash();
   updateSidebarToggleIcon(collapsed);
-  if (typeof renderThemeToggle === "function") renderThemeToggle();
 
   // move any pre-existing body content (written by the page) into #pageContent
   const content = document.getElementById("pageContent");
