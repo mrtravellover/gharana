@@ -72,6 +72,20 @@
   </div>
 
   <div class="card" style="margin-top:14px;">
+    <div class="section-head"><h2>⬇ Export CSV</h2></div>
+    <p class="hint" style="margin-bottom:10px;">Each export includes the date, loan number, and customer for every entry. Use the period tabs above (Monthly/Quarterly/Half-yearly/Yearly) and the dropdown to pick a specific month or year, then check the box below to export just that period instead of the complete history.</p>
+    <label style="display:flex;align-items:center;gap:8px;font-weight:500;color:var(--ink);margin-bottom:12px;">
+      <input type="checkbox" id="exportCurrentPeriodOnly" style="width:auto;">
+      Export only the currently selected period (<span id="exportPeriodLabel" style="color:var(--ink-soft);">complete history</span>) instead of everything
+    </label>
+    <div style="display:flex;gap:10px;flex-wrap:wrap;">
+      <button type="button" class="btn btn-secondary" onclick="exportMoneyOutCSV()">⬇ Money out</button>
+      <button type="button" class="btn btn-secondary" onclick="exportMoneyInCSV()">⬇ Money in</button>
+      <button type="button" class="btn btn-secondary" onclick="exportInterestEarnedCSV()">⬇ Interest earned</button>
+    </div>
+  </div>
+
+  <div class="card" style="margin-top:14px;">
     <h2>Metal summary <span style="font-weight:400;font-size:13px;color:var(--ink-soft);">(active loans, currently in the locker)</span></h2>
     <div class="divider-dashed"></div>
     <div class="grid grid-2">
