@@ -1,0 +1,391 @@
+let custLoans = [];
+let custDeposits = [];
+
+const custId = new URLSearchParams(location.search).get("id");
+
+requireAuth(async () => {
+  renderShell({ active: "customers", title: "Customer Profile" });
+  if (!custId) { toast("No customer selected"); location.href = "customers.html"; return; }
+  document.getElementById("newLoanLink").href = `loan-create.html?customerId=${custId}`;
+  document.getElementById("loanSearchInput").addEventListener("input", (e) => renderLoans(e.target.value));
+  wirePhotoCapture("custPhotoBtn", null, uploadCustomerPhoto);
+  document.getElementById("depositDate").valueAsDate = new Date();
+  setupWithdrawModeCards();
+  await loadProfile();
+  await loadDeposits();
+});
+
+function setupWithdrawModeCards() {
+  const cards = document.querySelectorAll("#withdrawModeCards .radio-card");
+  cards.forEach((card) => {
+    card.addEventListener("click", () => {
+      card.querySelector('input[type="radio"]').checked = true;
+      cards.forEach((c) => c.classList.toggle("selected", c === card));
+    });
+  });
+}
+
+let currentCustomerData = null;
+
+async function loadProfile() {
+  const doc = await db.collection("customers").doc(custId).get();
+  if (!doc.exists) { toast("Customer not found"); location.href = "customers.html"; return; }
+  const c = doc.data();
+  c.aadhaar = await decryptAadhaar(c.aadhaar);
+  currentCustomerData = c;
+
+  document.getElementById("profileCard").innerHTML = `
+    <div class="section-head">
+      <h2>${escapeHtml(c.name)}</h2>
+      <button class="btn btn-ghost btn-sm" onclick="toggleDetailsEdit()" id="detailsEditToggle">Edit</button>
+    </div>
+    <div class="divider-dashed"></div>
+    <div id="profileDetailsView">
+      <div class="grid grid-2" style="gap:10px;">
+        <div><div class="stat"><div class="label">Mobile</div><div class="value mono" style="font-size:16px;">${escapeHtml(c.mobile || "—")}</div></div></div>
+        <div><div class="stat"><div class="label">Aadhaar</div><div class="value mono" style="font-size:16px;">${escapeHtml(c.aadhaar || "—")}</div></div></div>
+      </div>
+      <div class="field" style="margin-top:12px;"><div class="stat"><div class="label">Address / village</div><div class="value" style="font-size:15px;font-family:var(--font-body);font-weight:500;">${escapeHtml(c.address || "—")}</div></div></div>
+    </div>
+    <div id="profileDetailsEdit" style="display:none;">
+      <div class="field"><label>Full name</label><input type="text" id="editCustName" value="${escapeHtml(c.name || "")}"></div>
+      <div class="grid grid-2">
+        <div class="field"><label>Mobile number</label><input type="tel" id="editCustMobile" value="${escapeHtml(c.mobile || "")}"></div>
+        <div class="field"><label>Aadhaar number</label><input type="text" id="editCustAadhaar" maxlength="12" value="${escapeHtml(c.aadhaar || "")}"></div>
+      </div>
+      <div class="field"><label>Address / village</label><input type="text" id="editCustAddress" value="${escapeHtml(c.address || "")}"></div>
+      <button class="btn btn-primary btn-sm" onclick="saveDetails()">Save changes</button>
+    </div>
+  `;
+
+  document.getElementById("profilePhotoWrap").innerHTML = c.photoUrl
+    ? `<img src="${c.photoUrl}" style="width:100%;max-width:220px;border-radius:8px;border:1px solid var(--line);">`
+    : `<p style="color:var(--ink-soft);font-size:13.5px;">No photo yet — tap "📷 Retake" above to add one.</p>`;
+
+  document.getElementById("profileNotes").textContent = c.notes || "No notes recorded.";
+  document.getElementById("profileNotesInput").value = c.notes || "";
+
+  renderAccountStatus(c);
+
+  const loanSnap = await db.collection("loans").where("customerId", "==", custId).get();
+  custLoans = loanSnap.docs.map((d) => ({ id: d.id, ...d.data() }));
+  custLoans.sort((a, b) => toJsDate(b.date) - toJsDate(a.date));
+  renderLoans("");
+}
+
+function renderAccountStatus(c) {
+  const status = c.accountStatus || "active";
+  const labels = { active: "Active", hold: "On hold", closed: "Closed" };
+  const history = (c.statusHistory || []).slice().reverse();
+
+  let actions = "";
+  if (status === "active") {
+    actions = `
+      <button class="btn btn-secondary btn-sm" onclick="openStatusModal('hold')">Put on hold</button>
+      <button class="btn btn-danger btn-sm" onclick="openStatusModal('closed')">Close account</button>`;
+  } else if (status === "hold") {
+    actions = `
+      <button class="btn btn-primary btn-sm" onclick="openStatusModal('active')">Reactivate</button>
+      <button class="btn btn-danger btn-sm" onclick="openStatusModal('closed')">Close account</button>`;
+  } else {
+    actions = `<button class="btn btn-primary btn-sm" onclick="openStatusModal('active')">Reactivate</button>`;
+  }
+
+  document.getElementById("accountStatusWrap").innerHTML = `
+    <div style="display:flex;align-items:center;gap:8px;margin-bottom:10px;">
+      <span class="status-dot status-dot-${status}"></span>
+      <strong>${labels[status]}</strong>
+    </div>
+    ${c.statusRemark ? `<p style="color:var(--ink-soft);font-size:13.5px;margin-bottom:10px;">Latest remark: ${escapeHtml(c.statusRemark)}</p>` : ""}
+    <div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:12px;">${actions}</div>
+    ${history.length ? `
+      <div class="divider-dashed"></div>
+      <p style="font-size:12px;font-weight:600;color:var(--ink-soft);margin-bottom:6px;">History</p>
+      ${history.map((h) => `
+        <div class="row" style="font-size:13px;margin-bottom:4px;"><span class="k">${fmtDate(h.date)} — ${labels[h.status] || h.status}</span><span>${escapeHtml(h.remark || "")}</span></div>
+      `).join("")}
+    ` : ""}
+  `;
+}
+
+function openStatusModal(targetStatus) {
+  const titles = { active: "Reactivate account", hold: "Put account on hold", closed: "Close account" };
+  document.getElementById("statusChangeTitle").textContent = titles[targetStatus];
+  document.getElementById("statusChangeTarget").value = targetStatus;
+  document.getElementById("statusChangeRemark").value = "";
+  openModal("statusChangeModal");
+}
+
+async function confirmStatusChange() {
+  const targetStatus = document.getElementById("statusChangeTarget").value;
+  const remark = document.getElementById("statusChangeRemark").value.trim();
+  if (!remark) { toast("A remark is required"); return; }
+
+  const btn = document.getElementById("statusChangeConfirmBtn");
+  btn.disabled = true; btn.textContent = "Saving…";
+
+  await db.collection("customers").doc(custId).update({
+    accountStatus: targetStatus,
+    statusRemark: remark,
+    statusHistory: firebase.firestore.FieldValue.arrayUnion({
+      status: targetStatus,
+      remark,
+      date: firebase.firestore.Timestamp.now(),
+    }),
+  });
+
+  closeModal("statusChangeModal");
+  toast("Account status updated");
+  btn.disabled = false; btn.textContent = "Confirm";
+  await loadProfile();
+}
+
+function toggleDetailsEdit() {
+  const editBox = document.getElementById("profileDetailsEdit");
+  const viewBox = document.getElementById("profileDetailsView");
+  const isOpen = editBox.style.display !== "none";
+  editBox.style.display = isOpen ? "none" : "block";
+  viewBox.style.display = isOpen ? "block" : "none";
+  document.getElementById("detailsEditToggle").textContent = isOpen ? "Edit" : "Cancel";
+}
+
+async function saveDetails() {
+  const name = document.getElementById("editCustName").value.trim();
+  const mobile = document.getElementById("editCustMobile").value.trim();
+  const aadhaar = await encryptAadhaar(document.getElementById("editCustAadhaar").value);
+  const address = document.getElementById("editCustAddress").value.trim();
+  if (!name || !mobile || !address) { toast("Name, mobile, and address are required"); return; }
+
+  const nameChanged = name !== (currentCustomerData.name || "");
+  await db.collection("customers").doc(custId).update({ name, mobile, aadhaar, address });
+
+  if (nameChanged) {
+    const loanSnap = await db.collection("loans").where("customerId", "==", custId).get();
+    const batch = db.batch();
+    loanSnap.docs.forEach((d) => batch.update(d.ref, { customerName: name }));
+    if (!loanSnap.empty) await batch.commit();
+  }
+
+  toast("Customer details updated");
+  await loadProfile();
+}
+
+function toggleNotesEdit() {
+  const editBox = document.getElementById("profileNotesEdit");
+  const isOpen = editBox.style.display !== "none";
+  editBox.style.display = isOpen ? "none" : "block";
+  document.getElementById("notesEditToggle").textContent = isOpen ? "Edit" : "Cancel";
+}
+
+async function saveNotes() {
+  const notes = document.getElementById("profileNotesInput").value.trim();
+  await db.collection("customers").doc(custId).update({ notes });
+  document.getElementById("profileNotes").textContent = notes || "No notes recorded.";
+  toggleNotesEdit();
+  toast("Note saved");
+}
+
+async function uploadCustomerPhoto(file) {
+  if (!file) return;
+  toast("Uploading photo…");
+  try {
+    const url = await uploadPhoto(file, `customer-photos/${custId}-${Date.now()}.jpg`);
+    await db.collection("customers").doc(custId).update({ photoUrl: url });
+    document.getElementById("profilePhotoWrap").innerHTML = `<img src="${url}" style="width:100%;max-width:220px;border-radius:8px;border:1px solid var(--line);">`;
+    toast("Photo updated");
+  } catch (err) {
+    console.error("Photo upload failed:", err);
+    toast("Photo upload failed — check your connection and try again.");
+  }
+}
+
+function renderLoans(query) {
+  const q = (query || "").trim().toLowerCase();
+  const loans = !q ? custLoans : custLoans.filter((l) =>
+    (l.loanNumber || "").toLowerCase().includes(q) || (l.itemNames || []).some((n) => n.includes(q))
+  );
+
+  const body = document.getElementById("loanBody");
+  if (loans.length === 0) {
+    body.innerHTML = `<tr><td colspan="6" style="color:var(--ink-soft);padding:20px 0;">${q ? "No matching loans." : "No loans yet for this customer."}</td></tr>`;
+    return;
+  }
+  body.innerHTML = loans.map((l) => `
+    <tr class="clickable" onclick="location.href='loan-detail.html?id=${l.id}'">
+      <td class="mono">${escapeHtml(l.loanNumber)}</td>
+      <td style="text-transform:capitalize;">${(l.itemNames || []).join(", ") || "—"}</td>
+      <td>${l.itemsIdentityNote ? escapeHtml(l.itemsIdentityNote) : `<span style="color:var(--ink-soft);">—</span>`}</td>
+      <td>${fmtDate(l.date)}</td>
+      <td class="mono">${fmtMoney(l.totalPrincipal || 0)}</td>
+      <td><span class="badge badge-${l.status}">${l.status}</span></td>
+    </tr>`).join("");
+}
+
+// ---------- Surplus funds held (customer deposits) ----------
+// Separate from loans entirely — this is money the shop owes BACK to the
+// customer, not the other way around. A deposit can be withdrawn from
+// PARTIALLY, more than once (e.g. deposit ₹2,00,000, withdraw ₹1,00,000,
+// later withdraw another ₹5,000 — ₹95,000 stays held). Each withdrawal is
+// either given instantly, or marked "pending" if it needs to be brought
+// from home/the bank first — a pending withdrawal does NOT reduce the
+// remaining balance until it's actually marked as given.
+//
+// Interest (when a deposit is interest-bearing) is calculated simply: the
+// current remaining balance × the deposit's rate, from the deposit date to
+// today — not recalculated period-by-period as the balance changes, by
+// deliberate choice for simplicity.
+async function loadDeposits() {
+  const snap = await db.collection("customers").doc(custId).collection("deposits").get();
+  custDeposits = snap.docs.map((d) => ({ id: d.id, ...d.data() }));
+  custDeposits.sort((a, b) => toJsDate(b.depositedDate) - toJsDate(a.depositedDate));
+
+  await Promise.all(custDeposits.map(async (d) => {
+    const wSnap = await db.collection("customers").doc(custId).collection("deposits").doc(d.id).collection("withdrawals").get();
+    d.withdrawals = wSnap.docs.map((w) => ({ id: w.id, ...w.data() }));
+    d.withdrawals.sort((a, b) => toJsDate(b.date) - toJsDate(a.date));
+  }));
+
+  renderDeposits();
+}
+
+function depositRemaining(d) {
+  const given = (d.withdrawals || []).filter((w) => w.status === "completed").reduce((s, w) => s + (Number(w.amount) || 0), 0);
+  return round2(d.amount - given);
+}
+
+function renderDeposits() {
+  const list = document.getElementById("depositsList");
+  if (!custDeposits.length) {
+    list.innerHTML = `<p style="color:var(--ink-soft);font-size:13.5px;">No surplus funds on record for this customer.</p>`;
+    return;
+  }
+
+  list.innerHTML = custDeposits.map((d) => {
+    const remaining = depositRemaining(d);
+    const fullyWithdrawn = remaining <= 0;
+    const interest = d.interestBearing && d.interestRate > 0 && remaining > 0 ? periodInterest(remaining, d.interestRate, d.depositedDate, new Date(), "simple") : 0;
+    const payable = round2(remaining + interest);
+
+    const withdrawalRows = (d.withdrawals || []).map((w) => `
+      <div class="row">
+        <span class="k">${fmtDate(w.date)} — ${fmtMoney(w.amount)}</span>
+        <span>${w.status === "pending"
+          ? `<span class="badge" style="background:var(--warn-soft);color:var(--warn);">pending — bring it</span> <button type="button" class="btn btn-ghost btn-sm" style="padding:2px 6px;" onclick="completeWithdrawal('${d.id}','${w.id}')">Mark given</button>`
+          : `<span class="badge badge-closed">given</span>`}</span>
+      </div>`).join("");
+
+    return `
+    <div class="disb-card">
+      <div class="row"><strong class="mono">${fmtMoney(d.amount)} deposited</strong>${fullyWithdrawn ? `<span class="badge badge-closed">fully withdrawn</span>` : `<span class="badge badge-active">active</span>`}</div>
+      <div class="row"><span class="k">Deposited</span><span>${fmtDate(d.depositedDate)}</span></div>
+      <div class="row"><span class="k">Remaining balance</span><strong class="mono">${fmtMoney(remaining)}</strong></div>
+      ${d.interestBearing ? `<div class="row"><span class="k">Interest</span><span>${d.interestRate}%/mo — ${fmtMoney(interest)} so far, on the remaining balance</span></div>` : ""}
+      <div class="row"><span class="k" style="color:var(--good);">Payable if withdrawn today</span><strong class="mono" style="color:var(--good);">${fmtMoney(payable)}</strong></div>
+      ${d.notes ? `<div class="row"><span class="k">Notes</span><span>${escapeHtml(d.notes)}</span></div>` : ""}
+      ${withdrawalRows ? `<div class="divider-dashed" style="margin:8px 0;"></div>${withdrawalRows}` : ""}
+      ${!fullyWithdrawn ? `<div style="margin-top:8px;"><button type="button" class="btn btn-secondary btn-sm" onclick="openWithdrawModal('${d.id}', ${remaining})">− Record withdrawal</button></div>` : ""}
+    </div>`;
+  }).join("");
+}
+
+function openDepositModal() {
+  document.getElementById("depositAmount").value = "";
+  document.getElementById("depositDate").valueAsDate = new Date();
+  document.getElementById("depositInterestBearing").checked = false;
+  document.getElementById("depositRateField").style.display = "none";
+  document.getElementById("depositRate").value = "";
+  document.getElementById("depositNotes").value = "";
+  openModal("depositModal");
+}
+
+async function saveDeposit() {
+  const amount = parseFloat(document.getElementById("depositAmount").value);
+  const dateStr = document.getElementById("depositDate").value;
+  if (!amount || amount <= 0 || !dateStr) { toast("Enter a valid amount and date"); return; }
+
+  const interestBearing = document.getElementById("depositInterestBearing").checked;
+  const rate = parseFloat(document.getElementById("depositRate").value) || 0;
+  if (interestBearing && rate <= 0) { toast("Enter the interest rate, or uncheck \"paying interest\""); return; }
+
+  const btn = document.getElementById("saveDepositBtn");
+  btn.disabled = true; btn.textContent = "Saving…";
+
+  await db.collection("customers").doc(custId).collection("deposits").add({
+    amount,
+    depositedDate: firebase.firestore.Timestamp.fromDate(new Date(dateStr)),
+    interestBearing,
+    interestRate: interestBearing ? rate : 0,
+    notes: document.getElementById("depositNotes").value.trim(),
+    createdAt: firebase.firestore.FieldValue.serverTimestamp(),
+  });
+
+  await logActivity("customer-" + custId, "Surplus deposit added", `${fmtMoney(amount)} from ${currentCustomerData ? currentCustomerData.name : "customer"}`);
+
+  closeModal("depositModal");
+  toast("Deposit recorded");
+  btn.disabled = false; btn.textContent = "Save deposit";
+  await loadDeposits();
+}
+
+// ---------- Withdrawals against a deposit (partial or full, instant or pending) ----------
+let withdrawDepositId = null;
+let withdrawDepositRemaining = 0;
+
+function openWithdrawModal(depositId, remaining) {
+  withdrawDepositId = depositId;
+  withdrawDepositRemaining = remaining;
+  document.getElementById("withdrawRemainingHint").textContent = `Remaining balance available: ${fmtMoney(remaining)}`;
+  document.getElementById("withdrawAmount").value = "";
+  document.getElementById("withdrawAmount").max = remaining;
+  document.getElementById("withdrawDate").valueAsDate = new Date();
+  document.getElementById("withdrawNotes").value = "";
+  const cards = document.querySelectorAll("#withdrawModeCards .radio-card");
+  cards.forEach((c) => {
+    const radio = c.querySelector('input[type="radio"]');
+    radio.checked = c.dataset.mode === "instant";
+    c.classList.toggle("selected", c.dataset.mode === "instant");
+  });
+  openModal("withdrawModal");
+}
+
+async function saveWithdrawal() {
+  const amount = parseFloat(document.getElementById("withdrawAmount").value);
+  const dateStr = document.getElementById("withdrawDate").value;
+  if (!amount || amount <= 0 || !dateStr) { toast("Enter a valid amount and date"); return; }
+  if (amount > withdrawDepositRemaining + 0.01) { toast(`Only ${fmtMoney(withdrawDepositRemaining)} remains in this deposit`); return; }
+
+  const mode = document.querySelector('input[name="withdrawMode"]:checked').value; // "instant" | "pending"
+  const btn = document.getElementById("saveWithdrawBtn");
+  btn.disabled = true; btn.textContent = "Saving…";
+
+  const data = {
+    amount,
+    date: firebase.firestore.Timestamp.fromDate(new Date(dateStr)),
+    status: mode === "instant" ? "completed" : "pending",
+    notes: document.getElementById("withdrawNotes").value.trim(),
+    customerId: custId,
+    customerName: currentCustomerData ? currentCustomerData.name : "",
+    createdAt: firebase.firestore.FieldValue.serverTimestamp(),
+  };
+  if (mode === "instant") data.completedDate = firebase.firestore.FieldValue.serverTimestamp();
+
+  await db.collection("customers").doc(custId).collection("deposits").doc(withdrawDepositId).collection("withdrawals").add(data);
+  await logActivity("customer-" + custId, "Deposit withdrawal recorded", `${fmtMoney(amount)} — ${mode === "instant" ? "given now" : "marked pending"}`);
+
+  closeModal("withdrawModal");
+  toast(mode === "instant" ? "Withdrawal recorded" : "Marked pending — will show on the Dashboard until given");
+  btn.disabled = false; btn.textContent = "Save";
+  await loadDeposits();
+}
+
+async function completeWithdrawal(depositId, withdrawalId) {
+  if (!confirm("Mark this withdrawal as given? This reduces the deposit's remaining balance.")) return;
+  await db.collection("customers").doc(custId).collection("deposits").doc(depositId).collection("withdrawals").doc(withdrawalId).update({
+    status: "completed",
+    completedDate: firebase.firestore.FieldValue.serverTimestamp(),
+  });
+  toast("Marked as given");
+  await loadDeposits();
+}
+
+
