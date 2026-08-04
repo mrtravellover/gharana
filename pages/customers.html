@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html lang="en">
+<script>(function(){try{var p=localStorage.getItem('gl_theme')||'system';var d=p==='system'?(window.matchMedia&&matchMedia('(prefers-color-scheme: dark)').matches?'dark':'light'):p;document.documentElement.setAttribute('data-theme',d);}catch(e){}})();</script>
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Customers — Gharana</title>
+<link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png">
+<link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png">
+<link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png">
+<link rel="manifest" href="/site.webmanifest">
+<meta name="theme-color" content="#0B2A5B">
+<link rel="preconnect" href="https://www.gstatic.com">
+<link rel="preconnect" href="https://firestore.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../css/style.css">
+</head>
+<body>
+<div id="stagedContent">
+  <div class="usearch-bar">
+    <svg class="usearch-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/></svg>
+    <input type="text" id="searchInput" placeholder="Search by name, mobile, Aadhaar, village, or notes…">
+    <button class="usearch-clear" id="searchClearBtn" title="Clear search" aria-label="Clear search" style="display:none;">✕</button>
+    <button class="btn btn-primary btn-sm" onclick="openCustomerModal()">+ Add customer</button>
+  </div>
+  <div class="usearch-meta">
+    <span id="searchResultCount" class="hint"></span>
+  </div>
+
+  <div class="card" style="padding:0;overflow:hidden;">
+    <table>
+      <thead><tr><th>Name</th><th>Mobile</th><th>Village</th><th>Loans</th></tr></thead>
+      <tbody id="customerBody"><tr><td colspan="4" style="color:var(--ink-soft);padding:20px 0;">Loading…</td></tr></tbody>
+    </table>
+  </div>
+</div>
+
+<!-- Add Customer Modal -->
+<div class="modal-overlay" id="customerModal" style="display:none;">
+  <div class="modal">
+    <h2>New customer</h2>
+    <form id="customerForm">
+      <div class="field"><label>Full name *</label><input type="text" id="custName" required></div>
+      <div class="grid grid-2">
+        <div class="field"><label>Mobile number *</label><input type="tel" id="custMobile" required pattern="[0-9]{10}" placeholder="9876543210"></div>
+        <div class="field"><label>Aadhaar number</label><input type="text" id="custAadhaar" maxlength="12" placeholder="XXXX XXXX XXXX"></div>
+      </div>
+      <div class="field"><label>Address / village *</label><input type="text" id="custAddress" required></div>
+      <div class="field">
+        <label>Customer photo</label>
+        <button type="button" class="btn btn-secondary" id="custPhotoBtn">📷 Take photo</button>
+        <div id="custPhotoPreview"></div>
+        <div class="hint">Optional, but useful for identification.</div>
+      </div>
+      <div class="field"><label>Notes / remarks</label><textarea id="custNotes"></textarea></div>
+      <div style="display:flex;gap:10px;margin-top:6px;">
+        <button type="button" class="btn btn-secondary btn-block" onclick="closeCustomerModal()">Cancel</button>
+        <button type="submit" class="btn btn-primary btn-block" id="saveCustBtn">Save customer</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-storage-compat.js"></script>
+<script src="../js/firebase-config.js"></script>
+<script src="../js/auth.js"></script>
+<script src="../js/i18n.js"></script>
+<script src="../js/nav.js"></script>
+<script src="../js/theme.js"></script>
+<script src="../js/camera.js"></script>
+<script src="../js/interest.js"></script>
+<script src="../js/crypto.js"></script>
+<script src="../js/search.js"></script>
+<script src="../js/customers.js"></script>
+<script src="../js/owl-nlu/numberParser.js"></script>
+<script src="../js/owl-nlu/dateParser.js"></script>
+<script src="../js/owl-nlu/entityExtractor.js"></script>
+<script src="../js/owl-nlu/conversationMemory.js"></script>
+<script src="../js/owl-nlu/intentParser.js"></script>
+<script src="../js/owl-nlu/interestCalculator.js"></script>
+<script src="../js/owl-nlu/responseGenerator.js"></script>
+<script src="../js/owl-assistant.js"></script>
+</body>
+</html>

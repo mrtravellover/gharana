@@ -1,0 +1,281 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Gharana — Splash</title>
+<link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png">
+<link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png">
+<link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png">
+<link rel="manifest" href="/site.webmanifest">
+<meta name="theme-color" content="#0B2A5B">
+<link rel="preconnect" href="https://www.gstatic.com">
+<link rel="preconnect" href="https://firestore.googleapis.com">
+<style>
+  :root{
+    --navy:#0B2A5B;
+    --royal:#184A8C;
+    --gold:#D4A017;
+    --gold-light:#F7CC5F;
+    --white:#FFFFFF;
+    --loading:#E2E8F0;
+  }
+
+  *{ box-sizing:border-box; margin:0; padding:0; }
+
+  html,body{
+    height:100%;
+    background:var(--navy);
+    overflow:hidden;
+    font-family:'Segoe UI', Arial, sans-serif;
+  }
+
+  .splash{
+    position:relative;
+    width:100vw;
+    height:100vh;
+    background:var(--navy);
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    overflow:hidden;
+  }
+
+  .stage{
+    position:relative;
+    width:min(90vw, 520px);
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+  }
+
+  /* ---------- Logo cluster (ring + glow + mark) ---------- */
+  .logo-cluster{
+    position:relative;
+    width:280px;
+    height:280px;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+  }
+
+  /* glow behind logo */
+  .glow{
+    position:absolute;
+    width:220px;
+    height:220px;
+    border-radius:50%;
+    background:radial-gradient(circle, rgba(212,160,23,0.35) 0%, rgba(212,160,23,0) 70%);
+    opacity:.15;
+    animation: glowPulse 1.8s ease-in-out infinite;
+    animation-delay:.3s;
+  }
+
+  @keyframes glowPulse{
+    0%,100%{ opacity:.15; }
+    50%{ opacity:.4; }
+  }
+
+  /* the mark itself */
+  .mark{
+    position:relative;
+    width:190px;
+    height:190px;
+    opacity:0;
+    transform:scale(.92);
+    animation: markIn .6s cubic-bezier(0.215, 0.61, 0.355, 1) forwards;
+    animation-delay:.25s;
+  }
+
+  @keyframes markIn{
+    to{ opacity:1; transform:scale(1); }
+  }
+
+  .mark svg{ width:100%; height:100%; display:block; overflow:visible; }
+
+  /* gold bars grow/shrink independently */
+  .bar{
+    transform-origin: bottom center;
+    animation: barPulse .9s ease-in-out infinite;
+  }
+  #bar1{ animation-delay:0s; }
+  #bar2{ animation-delay:.15s; }
+  #bar3{ animation-delay:.3s; }
+
+  @keyframes barPulse{
+    0%,100%{ transform: scaleY(.7); }
+    50%{ transform: scaleY(1); }
+  }
+
+  /* diagonal shine sweep across the mark */
+  .shine{
+    position:absolute;
+    top:0; left:-60%;
+    width:40%;
+    height:100%;
+    background:linear-gradient(115deg, rgba(255,255,255,0) 0%, rgba(255,255,255,.7) 50%, rgba(255,255,255,0) 100%);
+    mix-blend-mode:overlay;
+    animation: shineSweep 2s ease-in-out infinite;
+    animation-delay:1s;
+    pointer-events:none;
+  }
+
+  @keyframes shineSweep{
+    0%{ left:-60%; opacity:0; }
+    10%{ opacity:.7; }
+    45%{ opacity:.7; }
+    55%{ left:130%; opacity:0; }
+    100%{ left:130%; opacity:0; }
+  }
+
+  /* ---------- Text ---------- */
+  .app-name{
+    margin-top:28px;
+    font-size:clamp(36px,8vw,52px);
+    font-weight:800;
+    color:var(--white);
+    letter-spacing:.5px;
+    opacity:0;
+    transform:translateY(12px);
+    animation: fadeUp .5s ease-out forwards;
+    animation-delay:.6s;
+  }
+
+  .tagline{
+    margin-top:6px;
+    display:flex;
+    align-items:center;
+    gap:14px;
+    font-size:13px;
+    font-weight:600;
+    letter-spacing:3px;
+    color:var(--gold);
+    opacity:0;
+    animation: fadeIn .5s ease-out forwards;
+    animation-delay:.85s;
+  }
+
+  .tagline::before,
+  .tagline::after{
+    content:"";
+    width:26px;
+    height:1px;
+    background:var(--gold);
+    opacity:.6;
+  }
+
+  @keyframes fadeUp{
+    to{ opacity:1; transform:translateY(0); }
+  }
+  @keyframes fadeIn{
+    to{ opacity:1; }
+  }
+
+  /* ---------- Loading bar ---------- */
+  .loading-track{
+    margin-top:40px;
+    width:220px;
+    height:4px;
+    border-radius:100px;
+    background:rgba(24,74,140,.6);
+    overflow:hidden;
+    opacity:0;
+    animation: fadeIn .3s ease-out forwards;
+    animation-delay:.9s;
+  }
+
+  .loading-fill{
+    height:100%;
+    width:25%;
+    border-radius:100px;
+    background:linear-gradient(90deg, var(--gold-light), var(--gold));
+    animation: loadingPulse 1.2s ease-in-out infinite;
+    animation-delay:.9s;
+  }
+
+  @keyframes loadingPulse{
+    0%,100%{ width:25%; }
+    50%{ width:75%; }
+  }
+
+  .loading-text{
+    margin-top:14px;
+    font-size:11px;
+    letter-spacing:4px;
+    color:var(--loading);
+    opacity:0;
+    animation: fadeIn .5s ease-out forwards;
+    animation-delay:1s;
+  }
+
+  /* ---------- Exit state (triggered via JS by adding .splash--exit) ---------- */
+  .splash--exit .loading-fill{ animation:none; width:100% !important; transition:width .25s ease-out; }
+  .splash--exit{ animation: splashFade .3s ease-in forwards; animation-delay:.25s; }
+
+  @keyframes splashFade{
+    to{ opacity:0; }
+  }
+</style>
+</head>
+<body>
+
+<div class="splash" id="splash">
+  <div class="stage">
+
+    <div class="app-name">Gharana</div>
+    <div class="tagline">MORTGAGE MANAGEMENT</div>
+
+    <div class="loading-track">
+      <div class="loading-fill"></div>
+    </div>
+    <div class="loading-text">LOADING...</div>
+
+  </div>
+</div>
+
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
+<script src="../js/firebase-config.js"></script>
+<script>
+  window.__splashStartTime = Date.now();
+  window.__splashRevealTimer = setTimeout(function () {
+    var s = document.getElementById("splash");
+    if (s) { s.classList.add("splash--visible"); }
+  }, 350);
+
+  // Call window.gharanaSplashDone() once real data/assets are ready.
+  // If loading finished before the reveal delay above, the splash was
+  // never shown, so it's removed instantly with no flash and no wait.
+  window.gharanaSplashDone = function (onComplete) {
+    const splash = document.getElementById('splash');
+    if (window.__splashRevealTimer) clearTimeout(window.__splashRevealTimer);
+
+    if (!splash.classList.contains('splash--visible')) {
+      splash.style.display = 'none';
+      if (typeof onComplete === 'function') onComplete();
+      return;
+    }
+
+    splash.classList.add('splash--exit');
+    setTimeout(() => {
+      splash.style.display = 'none';
+      if (typeof onComplete === 'function') onComplete();
+    }, 300);
+  };
+
+  // Real startup work: resolve auth state, then send the person to the
+  // right place — dashboard if already signed in, login screen otherwise.
+  auth.onAuthStateChanged(async (user) => {
+    if (user) {
+      // warm up a real Firestore read so "initial data load" is genuine, not just auth
+      try { await db.collection("loans").limit(1).get(); } catch (e) { /* non-blocking */ }
+    }
+    window.gharanaSplashDone(() => {
+      location.href = user ? "dashboard.html" : "../index.html";
+    });
+  });
+</script>
+
+</body>
+</html>
