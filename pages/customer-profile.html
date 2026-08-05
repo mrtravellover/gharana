@@ -1,0 +1,171 @@
+<!DOCTYPE html>
+<html lang="en">
+<script>(function(){try{var p=localStorage.getItem('gl_theme')||'system';var d=p==='system'?(window.matchMedia&&matchMedia('(prefers-color-scheme: dark)').matches?'dark':'light'):p;document.documentElement.setAttribute('data-theme',d);}catch(e){}})();</script>
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Customer Profile — Gharana</title>
+<link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png">
+<link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png">
+<link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png">
+<link rel="manifest" href="/site.webmanifest">
+<meta name="theme-color" content="#0B2A5B">
+<link rel="preconnect" href="https://www.gstatic.com">
+<link rel="preconnect" href="https://firestore.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../css/style.css">
+</head>
+<body>
+<div id="stagedContent">
+  <div class="grid grid-2">
+    <div class="card" id="profileCard">Loading…</div>
+    <div class="card">
+      <div class="section-head"><h2>Photo</h2><button class="btn btn-secondary btn-sm" id="custPhotoBtn">📷 Retake</button></div>
+      <div id="profilePhotoWrap"></div>
+      <div class="divider-dashed"></div>
+      <div class="section-head"><h2>Notes</h2><button class="btn btn-ghost btn-sm" onclick="toggleNotesEdit()" id="notesEditToggle">Edit</button></div>
+      <p id="profileNotes" style="color:var(--ink-soft);">—</p>
+      <div id="profileNotesEdit" style="display:none;">
+        <textarea id="profileNotesInput" placeholder="e.g. Ask customer to clear dues"></textarea>
+        <button class="btn btn-primary btn-sm" style="margin-top:8px;" onclick="saveNotes()">Save note</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="card" style="margin-top:16px;">
+    <h2>Account status</h2>
+    <div class="divider-dashed"></div>
+    <div id="accountStatusWrap"></div>
+  </div>
+
+  <div class="card" style="margin-top:16px;">
+    <div class="section-head">
+      <h2>💰 Surplus funds held</h2>
+      <button type="button" class="btn btn-secondary btn-sm" onclick="openDepositModal()">+ Add deposit</button>
+    </div>
+    <div class="divider-dashed"></div>
+    <p class="hint" style="margin-bottom:10px;">Money this customer has kept with you for safekeeping — separate from their loans. Mark it "requested" the moment they say they need it back, so it shows up on the Dashboard alongside anything ready for release.</p>
+    <div id="depositsList"></div>
+  </div>
+
+  <div class="card" style="margin-top:16px;">
+    <div class="section-head">
+      <h2>Loans</h2>
+      <a href="#" id="newLoanLink" class="btn btn-primary btn-sm">+ New loan</a>
+    </div>
+    <div class="search-bar">
+      <input type="text" id="loanSearchInput" placeholder="Search this customer's loans by item name (e.g. chain) or loan number…">
+    </div>
+    <table>
+      <thead><tr><th>Loan #</th><th>Items</th><th>Belongs to</th><th>Locker note</th><th>Date</th><th>Principal</th><th>Status</th></tr></thead>
+      <tbody id="loanBody"><tr><td colspan="7" style="color:var(--ink-soft);padding:20px 0;">Loading…</td></tr></tbody>
+    </table>
+  </div>
+
+  <div class="card" style="margin-top:16px;">
+    <div class="section-head"><h2>🕒 Timeline</h2></div>
+    <div class="search-bar">
+      <input type="text" id="timelineSearchInput" placeholder="Search this customer's history…">
+    </div>
+    <div id="timelineContainer"></div>
+    <div class="timeline-load-sentinel" id="timelineSentinel"></div>
+    <div class="timeline-loading-row" id="timelineLoadingRow" style="display:none;"><div class="timeline-spinner"></div> Loading more…</div>
+  </div>
+</div>
+
+<!-- Add Deposit (Surplus Funds) Modal -->
+<div class="modal-overlay" id="depositModal" style="display:none;">
+  <div class="modal">
+    <h2>Add surplus fund deposit</h2>
+    <p style="color:var(--ink-soft);font-size:13.5px;">Record money this customer has kept with you for safekeeping.</p>
+    <div class="grid grid-2">
+      <div class="field"><label>Amount (₹) *</label><input type="number" id="depositAmount" required min="1"></div>
+      <div class="field"><label>Date deposited *</label><input type="date" id="depositDate" required></div>
+    </div>
+    <div class="field">
+      <label style="display:flex;align-items:center;gap:8px;font-weight:500;color:var(--ink);">
+        <input type="checkbox" id="depositInterestBearing" style="width:auto;" onchange="document.getElementById('depositRateField').style.display=this.checked?'':'none';">
+        We're paying interest on this deposit
+      </label>
+    </div>
+    <div class="field" id="depositRateField" style="display:none;">
+      <label>Monthly interest rate (%)</label>
+      <input type="number" id="depositRate" min="0" step="0.1" placeholder="e.g. 1.5">
+    </div>
+    <div class="field"><label>Notes</label><textarea id="depositNotes" placeholder="e.g. Kept aside from shop sale proceeds"></textarea></div>
+    <div style="display:flex;gap:10px;">
+      <button type="button" class="btn btn-secondary btn-block" onclick="closeModal('depositModal')">Cancel</button>
+      <button type="button" class="btn btn-primary btn-block" id="saveDepositBtn" onclick="saveDeposit()">Save deposit</button>
+    </div>
+  </div>
+</div>
+
+<!-- Record Withdrawal Modal -->
+<div class="modal-overlay" id="withdrawModal" style="display:none;">
+  <div class="modal">
+    <h2>Record withdrawal</h2>
+    <p class="hint" id="withdrawRemainingHint" style="margin-bottom:10px;"></p>
+    <div class="grid grid-2">
+      <div class="field"><label>Amount (₹) *</label><input type="number" id="withdrawAmount" required min="1"></div>
+      <div class="field"><label>Date *</label><input type="date" id="withdrawDate" required></div>
+    </div>
+    <div class="field">
+      <label>When are they getting it?</label>
+      <div class="radio-card-group" id="withdrawModeCards">
+        <label class="radio-card selected" data-mode="instant">
+          <input type="radio" name="withdrawMode" value="instant" checked>
+          <span class="radio-card-icon">⚡</span>
+          <span class="label">Giving it now</span>
+        </label>
+        <label class="radio-card" data-mode="pending">
+          <input type="radio" name="withdrawMode" value="pending">
+          <span class="radio-card-icon">🏠</span>
+          <span class="label">Need to bring it (home/bank)</span>
+        </label>
+      </div>
+    </div>
+    <div class="field"><label>Notes</label><textarea id="withdrawNotes" placeholder="e.g. Needed for a wedding expense"></textarea></div>
+    <div style="display:flex;gap:10px;">
+      <button type="button" class="btn btn-secondary btn-block" onclick="closeModal('withdrawModal')">Cancel</button>
+      <button type="button" class="btn btn-primary btn-block" id="saveWithdrawBtn" onclick="saveWithdrawal()">Save</button>
+    </div>
+  </div>
+</div>
+
+<!-- Account Status Change Modal -->
+<div class="modal-overlay" id="statusChangeModal" style="display:none;">
+  <div class="modal">
+    <h2 id="statusChangeTitle">Change account status</h2>
+    <input type="hidden" id="statusChangeTarget">
+    <p style="color:var(--ink-soft);font-size:13.5px;">A remark is required so there's always a record of why.</p>
+    <div class="field"><label>Remark *</label><textarea id="statusChangeRemark" placeholder="e.g. Customer requested account closure, all loans settled"></textarea></div>
+    <div style="display:flex;gap:10px;">
+      <button type="button" class="btn btn-secondary btn-block" onclick="closeModal('statusChangeModal')">Cancel</button>
+      <button type="button" class="btn btn-primary btn-block" id="statusChangeConfirmBtn" onclick="confirmStatusChange()">Confirm</button>
+    </div>
+  </div>
+</div>
+
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-storage-compat.js"></script>
+<script src="../js/firebase-config.js"></script>
+<script src="../js/auth.js"></script>
+<script src="../js/i18n.js"></script>
+<script src="../js/nav.js"></script>
+<script src="../js/theme.js"></script>
+<script src="../js/camera.js"></script>
+<script src="../js/interest.js"></script>
+<script src="../js/crypto.js"></script>
+<script src="../js/customer-profile.js"></script>
+<script src="../js/owl-nlu/numberParser.js"></script>
+<script src="../js/owl-nlu/dateParser.js"></script>
+<script src="../js/owl-nlu/entityExtractor.js"></script>
+<script src="../js/owl-nlu/conversationMemory.js"></script>
+<script src="../js/owl-nlu/intentParser.js"></script>
+<script src="../js/owl-nlu/interestCalculator.js"></script>
+<script src="../js/owl-nlu/responseGenerator.js"></script>
+<script src="../js/owl-assistant.js"></script>
+</body>
+</html>
