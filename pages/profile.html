@@ -44,6 +44,17 @@
   </div>
 
   <div class="card" style="margin-top:16px;">
+    <h2>Shop details</h2>
+    <div class="divider-dashed"></div>
+    <p style="color:var(--ink-soft);font-size:13.5px;margin-bottom:10px;">Used on generated receipts. Shared across both accounts — one shop, one set of details, so whoever edits this updates it for both of you.</p>
+    <div class="field"><label>Shop name *</label><input type="text" id="shopName" placeholder="e.g. Shah Jewellers"></div>
+    <div class="field"><label>Tagline</label><input type="text" id="shopTagline" placeholder="e.g. Gold &amp; Silver Mortgage Services"></div>
+    <div class="field"><label>Address *</label><input type="text" id="shopAddress" placeholder="e.g. 31 Nehru Marg, Jhabua, M.P. 457661"></div>
+    <div class="field"><label>Phone / WhatsApp number</label><input type="tel" id="shopPhone" placeholder="9876543210"></div>
+    <button class="btn btn-primary btn-sm" id="saveShopDetailsBtn" onclick="saveShopDetails()">Save shop details</button>
+  </div>
+
+  <div class="card" style="margin-top:16px;">
     <h2>Language</h2>
     <div class="divider-dashed"></div>
     <p style="color:var(--ink-soft);font-size:13.5px;margin-bottom:10px;">Changes the navigation menu and login screen. Loan forms and reports stay in English for now.</p>
