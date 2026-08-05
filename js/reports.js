@@ -166,6 +166,10 @@ async function loadDataForWindow(windowStart) {
       totalCollected: paymentsRaw.reduce((s, p) => s + (Number(p.amount) || 0), 0),
       interestCollected: summary.paymentBreakdown.reduce((s, p) => s + (Number(p.interestPortion) || 0), 0),
       totalWeight: ornaments.reduce((s, o) => s + (Number(o.weight) || 0) * (Number(o.qty) || 1), 0),
+      // Every date something happened on this loan — origination, each
+      // disbursement, each payment. Used to decide whether this loan counts
+      // as "active in period X," not just whether it started in period X.
+      activityDates: [loan.date, ...disbursements.map((d) => d.date), ...paymentsRaw.map((p) => p.date)],
     });
 
     processedLoanIds.add(loanId);
@@ -420,7 +424,7 @@ function currentPeriodLoans() {
   const k = document.getElementById("periodPicker").value;
   if (!k) return [];
   const keyFn = PERIOD_CONFIG[mode].keyFn;
-  return processedLoansCache.filter((l) => keyFn(l.date) === k);
+  return processedLoansCache.filter((l) => l.activityDates.some((d) => keyFn(d) === k));
 }
 
 function renderVillageAnalytics() {
