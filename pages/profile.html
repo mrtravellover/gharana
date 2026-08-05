@@ -81,6 +81,16 @@
     <div id="themeToggleProfile" style="max-width:280px;"></div>
   </div>
 
+  <div class="card" style="margin-top:16px;">
+    <h2>💾 Backup</h2>
+    <div class="divider-dashed"></div>
+    <p style="color:var(--ink-soft);font-size:13.5px;margin-bottom:10px;">
+      Downloads everything — every customer, loan, ornament, disbursement, payment, surplus deposit, gallery photo reference, and activity log entry — into a single file you can keep somewhere safe (your computer, a USB drive, cloud storage). If this device is ever lost, stolen, or reset, a backup lets you restore everything on a new one.
+    </p>
+    <p class="hint" id="lastBackupLabel" style="margin-bottom:10px;">Last backup: checking…</p>
+    <button class="btn btn-primary" id="downloadBackupBtn" onclick="downloadBackup()">⬇ Download backup</button>
+  </div>
+
   <div class="card" style="margin-top:16px;border-color:var(--danger);">
     <h2 style="color:var(--danger);">⚠ Danger zone</h2>
     <div class="divider-dashed"></div>
@@ -88,6 +98,14 @@
       This permanently deletes every customer, loan, ornament, disbursement, payment, activity log entry, saved draft, and photo in the app. Your and your father's login accounts are not affected — you'll still be able to sign in with the same email and password afterward, into a completely empty app.
     </p>
     <button class="btn btn-danger" onclick="startReset()">Reset whole panel</button>
+
+    <div class="divider-dashed" style="margin-top:18px;"></div>
+    <h3 style="font-size:15px;margin-bottom:8px;">Restore from backup</h3>
+    <p style="color:var(--ink-soft);font-size:13.5px;margin-bottom:12px;">
+      Replaces everything currently in the app with the contents of a backup file. <strong>Only works when the app is completely empty</strong> — if you have any live customers or loans right now, this is blocked, to prevent accidentally overwriting real data with an old backup. If you need to restore onto an account that still has data, reset the panel first (above), then restore.
+    </p>
+    <input type="file" id="restoreFileInput" accept=".json" style="display:none;" onchange="handleRestoreFileSelected(event)">
+    <button class="btn btn-danger" onclick="document.getElementById('restoreFileInput').click()">📂 Choose backup file to restore</button>
   </div>
 </div>
 
@@ -118,6 +136,52 @@
     <div style="display:flex;gap:10px;">
       <button type="button" class="btn btn-secondary btn-block" onclick="cancelReset()">Cancel</button>
       <button type="button" class="btn btn-danger btn-block" id="countdownConfirmBtn" onclick="proceedToSecondAuth()" disabled>Wait…</button>
+    </div>
+  </div>
+</div>
+
+<!-- Restore: file validated, preview before confirming -->
+<div class="modal-overlay" id="restorePreviewModal" style="display:none;">
+  <div class="modal">
+    <h2>Restore this backup?</h2>
+    <div id="restorePreviewBody" style="background:var(--paper-soft);border-radius:8px;padding:14px;margin-bottom:14px;font-size:13.5px;"></div>
+    <p style="background:var(--danger-soft);color:var(--danger);padding:12px 14px;border-radius:8px;font-size:13.5px;font-weight:600;margin-bottom:14px;">
+      This will replace everything currently in the app with the contents of this file. This cannot be undone.
+    </p>
+    <div style="display:flex;gap:10px;">
+      <button type="button" class="btn btn-secondary btn-block" onclick="cancelRestoreConfirm()">Cancel</button>
+      <button type="button" class="btn btn-danger btn-block" onclick="startRestoreConfirm()">Continue</button>
+    </div>
+  </div>
+</div>
+
+<!-- Restore: step 1 of 2 auth -->
+<div class="modal-overlay" id="restoreAuthModal" style="display:none;">
+  <div class="modal">
+    <h2 id="restoreAuthModalTitle">Confirm your login</h2>
+    <p style="color:var(--ink-soft);font-size:13.5px;">Enter your email and password to continue.</p>
+    <div class="field"><label>Email</label><input type="email" id="restoreAuthEmail"></div>
+    <div class="field"><label>Password</label><input type="password" id="restoreAuthPassword"></div>
+    <p id="restoreAuthError" style="color:var(--danger);font-size:13px;display:none;"></p>
+    <div style="display:flex;gap:10px;">
+      <button type="button" class="btn btn-secondary btn-block" onclick="cancelRestoreConfirm()">Cancel</button>
+      <button type="button" class="btn btn-danger btn-block" id="restoreAuthConfirmBtn" onclick="handleRestoreAuthSubmit()">Confirm</button>
+    </div>
+  </div>
+</div>
+
+<!-- Restore: step 2 of 2 countdown -->
+<div class="modal-overlay" id="restoreCountdownModal" style="display:none;">
+  <div class="modal">
+    <h2 style="color:var(--danger);">⚠ This will overwrite the app's data</h2>
+    <p style="background:var(--danger-soft);color:var(--danger);padding:12px 14px;border-radius:8px;font-size:14px;font-weight:600;margin-bottom:14px;">
+      Everything in this backup file will be written into the app. This cannot be undone.
+    </p>
+    <p style="text-align:center;font-size:13px;color:var(--ink-soft);margin-bottom:6px;">Please wait before you can proceed</p>
+    <p style="text-align:center;font-size:40px;font-weight:700;font-family:var(--font-mono);margin-bottom:14px;" id="restoreCountdownNumber">10</p>
+    <div style="display:flex;gap:10px;">
+      <button type="button" class="btn btn-secondary btn-block" onclick="cancelRestoreConfirm()">Cancel</button>
+      <button type="button" class="btn btn-danger btn-block" id="restoreCountdownConfirmBtn" onclick="proceedToRestoreSecondAuth()" disabled>Wait…</button>
     </div>
   </div>
 </div>
