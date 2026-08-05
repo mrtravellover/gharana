@@ -404,6 +404,7 @@ function handleGenerateReceipt(action) {
   if (type === "loan") {
     ctx.ornaments = ornaments;
     ctx.disbursements = disbursements;
+    ctx.payments = payments;
     ctx.summary = window._loanSummary;
   } else if (type === "payment" || type === "interest") {
     const idx = parseInt(document.getElementById("receiptContextSelect").value, 10);
@@ -426,10 +427,24 @@ function handleGenerateReceipt(action) {
   closeModal("receiptPickerModal");
 
   if (action === "print") {
-    setTimeout(printCurrentReceipt, 150); // small delay so the QR code finishes rendering before the print dialog opens
+    waitForReceiptImagesThenPrint();
   } else {
     shareReceiptWhatsApp(type, ctx, receiptNumber);
   }
+}
+
+// Waits for the receipt's logo image to actually finish loading before
+// opening the print dialog — printing while a large image is still
+// decoding is what caused broken pagination (blank first page, logo alone
+// on the second page) before this fix. Falls back to a short delay if the
+// image somehow never fires a load/error event.
+function waitForReceiptImagesThenPrint() {
+  const img = document.querySelector("#printReceiptArea .receipt-header img");
+  if (!img || img.complete) { printCurrentReceipt(); return; }
+  const done = () => printCurrentReceipt();
+  img.addEventListener("load", done, { once: true });
+  img.addEventListener("error", done, { once: true });
+  setTimeout(done, 1000); // safety net in case neither event fires
 }
 
 // ---------- WhatsApp reminder ----------
