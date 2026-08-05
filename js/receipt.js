@@ -59,7 +59,7 @@ function receiptFooterHTML() {
 function receiptHeaderHTML() {
   return `
     <div class="receipt-header">
-      <img src="../assets/logo-navy.png" alt="${escapeHtml(SHOP_INFO.name)}">
+      <img src="../assets/icon-logo-navy.png" width="52" height="52" alt="${escapeHtml(SHOP_INFO.name)}">
       <div class="shop-info">
         <strong>${escapeHtml(SHOP_INFO.name)}</strong>
         ${escapeHtml(SHOP_INFO.tagline)}<br>
@@ -107,7 +107,8 @@ function renderReceiptQr(containerId, text) {
 
 // ---------- Building each receipt type's body ----------
 function buildLoanReceiptBody(ctx) {
-  const { loan, ornaments, disbursements, summary } = ctx;
+  const { loan, ornaments, disbursements, payments, summary } = ctx;
+  const totalPaid = (payments || []).reduce((s, p) => s + (Number(p.amount) || 0), 0);
   return `
     <p>Customer: <strong>${escapeHtml(loan.customerName)}</strong>${loan.pledgedByMode === "other" ? ` (item belongs to ${escapeHtml(loan.pledgedByLabel)})` : ""}</p>
     <p>Loan #: <strong>${escapeHtml(loan.loanNumber)}</strong> &nbsp; Loan date: ${fmtDate(loan.date)} &nbsp; Status: ${loan.status}</p>
@@ -119,6 +120,7 @@ function buildLoanReceiptBody(ctx) {
       <thead><tr><th>Disbursed on</th><th>Amount</th><th>Rate/mo</th></tr></thead>
       <tbody>${disbursements.map((d) => `<tr><td>${fmtDate(d.date)}</td><td>${fmtMoney(d.amount)}</td><td>${d.rate}%</td></tr>`).join("")}</tbody>
     </table>
+    <p class="receipt-total">Amount already paid: ${fmtMoney(totalPaid)}</p>
     <p class="receipt-total">Principal outstanding: ${fmtMoney(summary.principalOutstanding)}</p>
     <p class="receipt-total">Interest due: ${fmtMoney(summary.interestOutstanding)}</p>
     <p class="receipt-total">Total payable: ${fmtMoney(summary.totalPayableToday)}</p>`;
