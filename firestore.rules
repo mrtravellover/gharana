@@ -1,0 +1,23 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Receipt verification (QR codes on printed receipts) — a customer
+    // scanning a receipt isn't signed in, so this is a narrow, deliberate
+    // exception: anyone can look up ONE specific receipt if they already
+    // know its exact receipt number (allow get), but nobody can list/query
+    // the collection to browse or enumerate all receipts ever issued
+    // (allow list: if false) — that would leak business volume and timing
+    // even without exposing any names. Only signed-in staff can create or
+    // modify receipt records (allow write, from the blanket rule below,
+    // which still applies here too since Firestore rules are additive).
+    match /receipts/{receiptId} {
+      allow get: if true;
+      allow list: if false;
+    }
+
+    // Only signed-in users (you + your father's accounts) can read/write.
+    match /{document=**} {
+      allow read, write: if request.auth != null;
+    }
+  }
+}
