@@ -22,7 +22,17 @@ function openSignaturePad(onCapture) {
 }
 
 function setupSignatureCanvas() {
-  const canvas = document.getElementById("sigPadCanvas");
+  let canvas = document.getElementById("sigPadCanvas");
+
+  // Clone-and-replace FIRST (clears any listeners left over from a
+  // previous open of this pad), THEN get the context and configure drawing
+  // using the element that's actually in the DOM from this point on —
+  // getting this order backwards means drawing happens on a detached
+  // canvas nobody can see, which is exactly what was happening before.
+  const fresh = canvas.cloneNode(true);
+  canvas.parentNode.replaceChild(fresh, canvas);
+  canvas = fresh;
+
   const ctx = canvas.getContext("2d");
 
   // Match the canvas's internal pixel size to its displayed size (accounting
@@ -63,16 +73,12 @@ function setupSignatureCanvas() {
   };
   const end = () => { sigPadDrawing = false; };
 
-  // Remove any listeners from a previous open (openSignaturePad can be
-  // called more than once per page visit) before attaching fresh ones.
-  const fresh = canvas.cloneNode(true);
-  canvas.parentNode.replaceChild(fresh, canvas);
-  fresh.addEventListener("mousedown", start);
-  fresh.addEventListener("mousemove", move);
+  canvas.addEventListener("mousedown", start);
+  canvas.addEventListener("mousemove", move);
   window.addEventListener("mouseup", end);
-  fresh.addEventListener("touchstart", start, { passive: false });
-  fresh.addEventListener("touchmove", move, { passive: false });
-  fresh.addEventListener("touchend", end);
+  canvas.addEventListener("touchstart", start, { passive: false });
+  canvas.addEventListener("touchmove", move, { passive: false });
+  canvas.addEventListener("touchend", end);
 }
 
 function clearSignaturePad() {
