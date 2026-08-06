@@ -119,12 +119,6 @@ function renderDisbursements() {
     </div>`).join("") || `<p style="color:var(--ink-soft);">No disbursements yet.</p>`;
 }
 
-function minimumNote(d) {
-  return d.minimumApplied
-    ? `<span class="hint" style="display:inline;color:var(--warn);">1-month minimum applied</span>`
-    : `<span class="hint" style="display:inline;">exact (365/366-day method)</span>`;
-}
-
 function renderInterest() {
   const summary = calcLoanSummary(disbursements, payments);
   document.getElementById("interestBody").innerHTML = summary.perDisbursement.map((d) => `
@@ -134,9 +128,8 @@ function renderInterest() {
       <td class="mono">${fmtMoney(d.principal)} <span style="color:var(--ink-soft);font-size:12px;">of ${fmtMoney(d.originalAmount)}</span></td>
       <td>${fmtDate(d.effectiveDate)}${d.dateChanged ? ` <span class="hint" style="display:inline;">(after payment)</span>` : ""}</td>
       <td>${formatDuration(d.days)}</td>
-      <td>${minimumNote(d)}</td>
       <td class="mono">${fmtMoney(d.interest)}</td>
-    </tr>`).join("") || `<tr><td colspan="7" style="color:var(--ink-soft);">No disbursements yet.</td></tr>`;
+    </tr>`).join("") || `<tr><td colspan="6" style="color:var(--ink-soft);">No disbursements yet.</td></tr>`;
 
   document.getElementById("sumPrincipal").textContent = fmtMoney(summary.principalOutstanding);
   document.getElementById("sumInterestAccrued").innerHTML = fmtInterestDue(summary.interestOutstanding);
@@ -220,7 +213,6 @@ async function saveDisbursement(e) {
   e.preventDefault();
   const rate = parseFloat(document.getElementById("mDisbRate").value);
   const date = firebase.firestore.Timestamp.fromDate(new Date(document.getElementById("mDisbDate").value));
-  const isReactivation = loanData.status === "released";
   const disbRef = await loanRef.collection("disbursements").add({
     amount: parseFloat(document.getElementById("mDisbAmount").value),
     rate,
@@ -230,11 +222,6 @@ async function saveDisbursement(e) {
     reason: document.getElementById("mDisbReason").value.trim(),
     collectedBy: document.getElementById("mDisbCollector").value.trim(),
     notes: document.getElementById("mDisbNotes").value.trim(),
-    // A disbursement that reactivates a released loan is treated as
-    // effectively a fresh start and gets its own one-time minimum-interest
-    // window, same as a brand new loan would. A plain top-up on a loan
-    // that's still active does not — it's day-wise interest from day one.
-    startsMinimumPeriod: isReactivation,
     createdAt: firebase.firestore.FieldValue.serverTimestamp(),
   });
 
@@ -297,7 +284,6 @@ function openReleaseConfirmModal() {
     <tr>
       <td>${fmtDate(d.effectiveDate)}</td>
       <td>${formatDuration(d.days)}</td>
-      <td>${minimumNote(d)}</td>
       <td class="mono">${fmtMoney(d.interest)}</td>
     </tr>`).join("");
   document.getElementById("releaseDueWarning").style.display = summary.totalPayableToday > 0 ? "block" : "none";
