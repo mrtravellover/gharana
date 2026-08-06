@@ -204,6 +204,28 @@ The "Payment type" dropdown (interest / partial principal / full closure) is jus
 - ✅ Audit trail — every disbursement, payment, rate change, item release, ready-to-release move, and closure is logged with who did it and when, shown in an "Activity" section on each loan page
 - ✅ Multi-period report comparison (today/month/quarter/half-year/year, current vs previous two) — see Reports above
 
+## Four corrections from real usage, checked and fixed before deploying
+
+**1) No-collateral loans were showing "Mark ready to release."** That workflow exists to track physically handing pledged items back — meaningless for a loan with nothing pledged. These loans now go straight to a "Close loan" button once settled, skipping the release step entirely. The photo-capture prompt in the closing flow is also hidden for them, since there's no item to photograph.
+
+**2) Reactivation flow — two real problems, both fixed.** The disbursement date field was only ever set to "today" once, at page load — if the tab stayed open a while before actually being used, the date could go stale by the time someone opened the form. Now it resets to today every time the modal opens (still fully editable, so a genuinely backdated entry is still just as easy). Separately, there was no way to add new items when giving more money on an existing loan — Add Disbursement only had money fields, nothing for identity/weight/etc. Added a full, optional item-entry section (same fields as New Loan) — leave empty for a plain top-up against existing items, or add new ones if new items are actually being pledged with this disbursement. If the loan had no collateral before, adding an item here correctly flips that.
+
+**3) Timeline not generating — a real, significant bug found and fixed.** Every time the timeline failed to load (most likely: a missing Firestore composite index), the error was being silently overwritten immediately afterward by an unconditional render call that replaced it with a generic "No history recorded" message — making a genuinely broken timeline look identical to a customer who simply has no history. This has likely been happening since the feature was first built, since the bug was in the *original* code path, not something introduced recently. Fixed to actually surface the real error, and specifically detect a missing-index failure and point directly to the fix (open the browser console for a one-click link to create it).
+
+**4) Activity log showing raw emails with no visible separator — two separate bugs, not one.** The missing space wasn't a formatting oversight in the text — the layout genuinely had no CSS separating the two pieces of information at all. And email addresses are now resolved to real display names (the ones already set in Profile) everywhere activity is shown — the loan detail page's activity log and the Customer Timeline both now read like "Kavish — Loan created: ₹2,000 to Ramesh" instead of a raw address running straight into the next word. Falls back to the email's username portion if no display name has been set for that account.
+
+Touches: `js/loan-detail.js`, `pages/loan-detail.html`, `js/customer-profile.js`. No new Firestore index needed for any of these four (Timeline's fix surfaces an *existing* index requirement more clearly — it doesn't add a new one).
+
+## Fixed: Item Return Receipt showed nothing for loans closed as a whole
+
+Real bug, and a good catch — this app actually has two separate "item returned" paths that had never been connected: releasing one specific item while a loan stays active (which sets that item's own `released` flag), and closing an entire loan at once (which only updated the loan's own status/photo, never touched each item's flag individually). A loan closed the second way — the far more common case for a simple one-item loan — would show a completely empty "Select released item" dropdown on the Item Return Receipt, even with a return photo already captured and the loan clearly closed.
+
+**Fixed two ways together:**
+- **Retroactively, for every loan already closed** — the receipt picker now treats every item on a closed loan as returned, falling back to the loan's own closure date and remark for any item that was never individually marked. This fixes existing closed loans immediately, with no data changes needed.
+- **Going forward** — closing a whole loan now also marks every not-yet-individually-released item as released, using the loan's actual closure date and remark, so the underlying data is correct at the source too, not just patched at display time.
+
+Touches: `js/loan-detail.js` only.
+
 ## Three more Loan Receipt fixes, found through real testing
 
 **1. "Due from" date was showing the wrong date entirely.** It used the disbursement's *original* date, always — even when a payment had since cleared that disbursement's interest up to a later date. If interest was fully settled up to 6 August, saying the outstanding principal is "due from 1 August" wrongly implies interest has been quietly building the whole time. Fixed to use the *live* effective date instead — the point interest is actually counting from right now, which correctly moves forward every time a payment resets it.
