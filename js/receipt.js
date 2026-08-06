@@ -157,6 +157,31 @@ function buildLoanReceiptBody(ctx) {
       ${loan.returnRemark ? `<p style="font-size:12.5px;color:#333;margin-top:2px;">Remarks: ${escapeHtml(loan.returnRemark)}</p>` : ""}
       ${loan.returnPhotoUrl ? `<img src="${loan.returnPhotoUrl}" width="140" height="140" style="margin-top:8px;border-radius:6px;object-fit:cover;" alt="Return photo">` : ""}
     </div>` : "";
+
+  // Match each disbursement to its current standing (perDisbursement is
+  // computed fresh by the engine, so this always reflects the real,
+  // up-to-date state — not just what was originally disbursed).
+  const perDisb = (summary.perDisbursement || []);
+  const disbRows = disbursements.map((d) => {
+    const live = perDisb.find((p) => p.id === d.id);
+    const remaining = live ? live.principal : d.amount;
+    let statusLabel, statusColor;
+    if (remaining <= 0) { statusLabel = "Closed"; statusColor = "#0A7B4F"; }
+    else if (remaining < d.amount) { statusLabel = "Partially paid"; statusColor = "#B8860B"; }
+    else { statusLabel = "Active"; statusColor = "#0B2A5B"; }
+    return `<tr>
+      <td>${fmtDate(d.date)}</td><td>${fmtMoney(d.amount)}</td><td>${d.rate}%</td>
+      <td>${fmtMoney(remaining)}</td>
+      <td><strong style="color:${statusColor};">${statusLabel}</strong></td>
+    </tr>`;
+  }).join("");
+
+  const paymentRows = (payments || [])
+    .slice()
+    .sort((a, b) => toJsDate(a.date) - toJsDate(b.date))
+    .map((p) => `<tr><td>${fmtDate(p.date)}</td><td style="text-transform:capitalize;">${p.type === "advance_interest" ? "Advance interest" : p.type}</td><td>${fmtMoney(p.amount)}</td></tr>`)
+    .join("");
+
   return `
     <p>Customer: <strong>${escapeHtml(loan.customerName)}</strong>${loan.pledgedByMode === "other" ? ` (item belongs to ${escapeHtml(loan.pledgedByLabel)})` : ""}</p>
     <p>Loan #: <strong>${escapeHtml(loan.loanNumber)}</strong> &nbsp; Loan date: ${fmtDate(loan.date)} &nbsp; Status: ${loan.status}</p>
@@ -166,9 +191,14 @@ function buildLoanReceiptBody(ctx) {
       <tbody>${ornaments.map((o) => `<tr><td>${escapeHtml(o.itemName)}</td><td>${o.metalType}</td><td>${o.weight}</td><td>${o.qty}</td><td>${o.category || "—"}</td></tr>`).join("")}</tbody>
     </table>
     <table>
-      <thead><tr><th>Disbursed on</th><th>Amount</th><th>Rate/mo</th></tr></thead>
-      <tbody>${disbursements.map((d) => `<tr><td>${fmtDate(d.date)}</td><td>${fmtMoney(d.amount)}</td><td>${d.rate}%</td></tr>`).join("")}</tbody>
+      <thead><tr><th>Disbursed on</th><th>Amount given</th><th>Rate/mo</th><th>Principal remaining</th><th>Status</th></tr></thead>
+      <tbody>${disbRows}</tbody>
     </table>
+    ${paymentRows ? `
+    <table>
+      <thead><tr><th>Payment date</th><th>Type</th><th>Amount</th></tr></thead>
+      <tbody>${paymentRows}</tbody>
+    </table>` : ""}
     <p class="receipt-total">Amount already paid: ${fmtMoney(totalPaid)}</p>
     <p class="receipt-total">Principal outstanding: ${fmtMoney(summary.principalOutstanding)}</p>
     <p class="receipt-total">Interest due: ${fmtInterestDue(summary.interestOutstanding)}</p>
