@@ -168,6 +168,7 @@ function calcLoanSummary(disbursements, payments = [], asOfDate = new Date()) {
     kind: p.type === "advance_interest" ? "advance_interest" : "payment",
     date: toJsDate(p.date),
     amount: Number(p.amount) || 0,
+    targetDisbursementId: p.targetDisbursementId || null,
   }));
   states.forEach((s, idx) => {
     s.pendingRateChanges.forEach((rc) => {
@@ -230,7 +231,16 @@ function calcLoanSummary(disbursements, payments = [], asOfDate = new Date()) {
     let interestPortion = 0, principalPortion = 0;
     let isFirstTouchedState = true;
 
-    for (const s of states) {
+    // A payment can optionally target one specific disbursement instead of
+    // the usual oldest-first waterfall — e.g. paying off a smaller top-up
+    // on its own without it going toward an older, unrelated disbursement
+    // first. Falls back to the normal full waterfall if the targeted
+    // disbursement can't be found (e.g. stale reference), rather than the
+    // payment silently applying nowhere.
+    const targeted = ev.targetDisbursementId ? states.filter((s) => s.id === ev.targetDisbursementId) : [];
+    const statesToProcess = targeted.length ? targeted : states;
+
+    for (const s of statesToProcess) {
       if (remaining <= 0) break;
       if (s.principal <= 0 && s.unpaidInterest <= 0) continue; // already settled
 
