@@ -1,0 +1,428 @@
+<!DOCTYPE html>
+<html lang="en">
+<script>(function(){try{var p=localStorage.getItem('gl_theme')||'system';var d=p==='system'?(window.matchMedia&&matchMedia('(prefers-color-scheme: dark)').matches?'dark':'light'):p;document.documentElement.setAttribute('data-theme',d);}catch(e){}})();</script>
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Loan Detail — Gharana</title>
+<link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png">
+<link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png">
+<link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png">
+<link rel="manifest" href="/site.webmanifest">
+<meta name="theme-color" content="#0B2A5B">
+<link rel="preconnect" href="https://www.gstatic.com">
+<link rel="preconnect" href="https://firestore.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../css/style.css">
+</head>
+<body>
+<div id="stagedContent">
+  <div class="card" id="loanHeader">Loading…</div>
+
+  <div class="card" style="margin-top:14px;padding:14px 18px;">
+    <div style="display:flex;gap:10px;flex-wrap:wrap;">
+      <button class="btn btn-primary" onclick="openDisbModal()">+ Add disbursement</button>
+      <button class="btn btn-primary" onclick="openPayModal()">+ Add payment</button>
+      <a href="customer-profile.html" id="topCustomerLink" class="btn btn-secondary">View customer</a>
+      <button class="btn btn-secondary" onclick="openReceiptPicker()">🧾 Generate receipt</button>
+      <button class="btn btn-secondary" onclick="sendWhatsAppReminder()">💬 WhatsApp reminder</button>
+    </div>
+  </div>
+
+  <div class="grid grid-2" style="margin-top:14px;align-items:start;">
+    <div class="card">
+      <div class="section-head"><h2>Ornaments pledged</h2></div>
+      <p style="font-size:13.5px;color:var(--ink-soft);margin-bottom:8px;cursor:pointer;" onclick="openIdentityModal()" title="Click to edit">
+        Locker note: <span id="lockerNoteInline">—</span>
+      </p>
+      <table>
+        <thead><tr><th>Item</th><th>Metal</th><th>Wt (g)</th><th>Qty</th><th>Category</th><th>Status</th><th>Actions</th></tr></thead>
+        <tbody id="ornamentBody"></tbody>
+      </table>
+    </div>
+
+    <div class="card">
+      <div class="section-head">
+        <h2>Disbursements</h2>
+      </div>
+      <div id="disbList"></div>
+    </div>
+  </div>
+
+  <div class="card" style="margin-top:14px;">
+    <div class="section-head"><h2>📷 Jewellery Gallery</h2></div>
+    <div class="gallery-cat-tabs" id="galleryCatTabs"></div>
+    <div class="gallery-grid" id="galleryGrid"></div>
+  </div>
+
+  <div class="card" style="margin-top:14px;">
+    <h2>Interest breakdown <span style="font-weight:400;font-size:13px;color:var(--ink-soft);">(as of today)</span></h2>
+    <p class="hint">Interest is calculated on real calendar days — 365 in a normal year, 366 in a leap year — not a flat 30-day month, so it's exact to the day. A minimum of 1 month's interest always applies once any time has passed, however short.</p>
+    <div class="divider-dashed"></div>
+    <table>
+      <thead><tr><th>Original date</th><th>Rate/mo</th><th>Principal now</th><th>Interest counted from</th><th>Actual duration</th><th>Note</th><th>Interest due</th></tr></thead>
+      <tbody id="interestBody"></tbody>
+    </table>
+    <div class="divider-dashed"></div>
+    <div class="grid grid-4">
+      <div class="stat"><div class="label">Principal outstanding</div><div class="value" id="sumPrincipal">—</div></div>
+      <div class="stat"><div class="label">Interest due now</div><div class="value" id="sumInterestAccrued">—</div><div class="hint" id="creditProjectionNote"></div></div>
+      <div class="stat"><div class="label">Interest paid so far</div><div class="value" id="sumInterestPaid">—</div></div>
+      <div class="stat"><div class="label">Total payable today</div><div class="value" id="sumPayable" style="color:var(--gold-deep)">—</div></div>
+    </div>
+  </div>
+
+  <div class="card" style="margin-top:14px;">
+    <div class="section-head">
+      <h2>Payments</h2>
+    </div>
+    <table>
+      <thead><tr><th>Date</th><th>Type</th><th>Amount</th><th>Received by</th><th>Remarks</th><th></th></tr></thead>
+      <tbody id="payBody"></tbody>
+    </table>
+  </div>
+
+  <div class="card" style="margin-top:14px;" id="statusActionsCard"></div>
+
+  <div class="card" style="margin-top:14px;">
+    <h2>Activity</h2>
+    <div class="divider-dashed"></div>
+    <div id="activityLog"></div>
+  </div>
+</div>
+
+<!-- Add Disbursement Modal -->
+<div class="modal-overlay" id="disbModal" style="display:none;">
+  <div class="modal">
+    <h2>Add disbursement</h2>
+    <form id="disbForm">
+      <div class="grid grid-2">
+        <div class="field"><label>Amount (₹) *</label><input type="number" id="mDisbAmount" required min="1"></div>
+        <div class="field"><label>Monthly rate (%) *</label><input type="number" id="mDisbRate" required min="0" step="0.1"></div>
+      </div>
+      <div class="grid grid-2">
+        <div class="field"><label>Date *</label><input type="date" id="mDisbDate" required></div>
+        <div class="field">
+          <label>Interest type</label>
+          <select id="mDisbInterestType">
+            <option value="simple">Simple (standard)</option>
+            <option value="compound">Compounding (monthly)</option>
+            <option value="compound_annual">Compounding (annually)</option>
+          </select>
+        </div>
+      </div>
+      <div class="grid grid-2">
+        <div class="field"><label>Reason</label><input type="text" id="mDisbReason"></div>
+        <div class="field"><label>Collected by</label><input type="text" id="mDisbCollector"></div>
+      </div>
+      <div class="field"><label>Notes</label><textarea id="mDisbNotes"></textarea></div>
+      <div class="field">
+        <label>Photo at disbursement</label>
+        <button type="button" class="btn btn-secondary" id="mDisbPhotoBtn">📷 Take photo</button>
+        <div id="mDisbPhotoPreview"></div>
+      </div>
+      <div style="display:flex;gap:10px;">
+        <button type="button" class="btn btn-secondary btn-block" onclick="closeModal('disbModal')">Cancel</button>
+        <button type="submit" class="btn btn-primary btn-block">Save</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- Add Payment Modal -->
+<div class="modal-overlay" id="payModal" style="display:none;">
+  <div class="modal">
+    <h2>Add payment</h2>
+    <form id="payForm">
+      <div class="field">
+        <label>Payment type *</label>
+        <select id="mPayType" required onchange="updatePayTypeHint()">
+          <option value="interest">Interest only</option>
+          <option value="principal">Partial principal</option>
+          <option value="full">Full closure (principal + interest)</option>
+          <option value="advance_interest">Advance interest payment</option>
+        </select>
+        <div class="hint" id="payTypeHint">Just a label for your records — every payment automatically clears interest due first, then reduces principal.</div>
+      </div>
+      <div class="grid grid-2">
+        <div class="field"><label>Amount (₹) *</label><input type="number" id="mPayAmount" required min="1"></div>
+        <div class="field"><label>Date *</label><input type="date" id="mPayDate" required></div>
+      </div>
+      <div class="field"><label>Received by</label><input type="text" id="mPayReceiver"></div>
+      <div class="field"><label>Remarks</label><textarea id="mPayRemarks"></textarea></div>
+      <div class="divider-dashed"></div>
+      <p style="font-size:13px;font-weight:600;color:var(--ink-soft);margin-bottom:6px;">Need to change a rate before collecting?</p>
+      <div id="payRateRows"></div>
+      <div style="display:flex;gap:10px;margin-top:6px;">
+        <button type="button" class="btn btn-secondary btn-block" onclick="closeModal('payModal')">Cancel</button>
+        <button type="submit" class="btn btn-primary btn-block">Save</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- Return Photo Modal -->
+<div class="modal-overlay" id="returnModal" style="display:none;">
+  <div class="modal">
+    <h2>Confirm return &amp; close loan</h2>
+    <div id="returnBalanceWrap"></div>
+    <p style="color:var(--ink-soft);font-size:13.5px;">Take a photo of the customer with the returned jewellery (recommended, but optional).</p>
+    <div class="field">
+      <label>Return photo</label>
+      <button type="button" class="btn btn-secondary" id="returnPhotoBtn">📷 Take photo</button>
+      <div id="returnPhotoPreview"></div>
+    </div>
+    <div class="field"><label>Date handed back *</label><input type="date" id="returnCloseDate" required></div>
+    <div class="field"><label>Remarks (optional)</label><textarea id="returnCloseRemark" placeholder="e.g. All items verified and handed to customer in person"></textarea></div>
+    <div style="display:flex;gap:10px;margin-top:10px;">
+      <button type="button" class="btn btn-secondary btn-block" onclick="closeModal('returnModal')">Cancel</button>
+      <button type="button" class="btn btn-primary btn-block" id="confirmReturnBtn" onclick="confirmReturn()">Confirm &amp; close</button>
+    </div>
+  </div>
+</div>
+
+<!-- Ready to Release Confirmation Modal -->
+<div class="modal-overlay" id="releaseConfirmModal" style="display:none;">
+  <div class="modal" style="max-width:520px;">
+    <div class="section-head">
+      <h2>Ready to release?</h2>
+      <button type="button" class="btn btn-ghost btn-sm" onclick="closeModal('releaseConfirmModal')">✕ Close</button>
+    </div>
+    <div class="grid grid-3" style="margin-top:10px;">
+      <div class="stat"><div class="label">Principal</div><div class="value" id="releasePrincipal" style="font-size:18px;">—</div></div>
+      <div class="stat"><div class="label">Interest</div><div class="value" id="releaseInterest" style="font-size:18px;">—</div></div>
+      <div class="stat"><div class="label">Total due</div><div class="value" id="releaseTotal" style="font-size:18px;color:var(--gold-deep);">—</div></div>
+    </div>
+    <div class="divider-dashed"></div>
+    <p style="font-size:13px;font-weight:600;color:var(--ink-soft);margin-bottom:6px;">Duration since each disbursement</p>
+    <table>
+      <thead><tr><th>Counted from</th><th>Actual duration</th><th>Note</th><th>Interest</th></tr></thead>
+      <tbody id="releaseDurationBody"></tbody>
+    </table>
+    <div class="divider-dashed"></div>
+    <div class="section-head">
+      <p style="font-size:13px;font-weight:600;color:var(--ink-soft);margin:0;">Need to change a rate before releasing?</p>
+    </div>
+    <div id="releaseRateRows"></div>
+    <p id="releaseDueWarning" style="display:none;background:var(--warn-soft);color:var(--warn);padding:10px 12px;border-radius:8px;font-size:13px;margin-top:12px;">
+      There's still a balance due. You can record the payment now, or move this to Ready to Release anyway and the due amount will keep showing on the dashboard and Loans list until it's settled.
+    </p>
+    <div style="display:flex;gap:10px;margin-top:14px;">
+      <button type="button" class="btn btn-secondary btn-block" onclick="closeModal('releaseConfirmModal')">Cancel</button>
+      <button type="button" class="btn btn-secondary btn-block" onclick="goRecordPaymentFirst()">Record payment first</button>
+      <button type="button" class="btn btn-primary btn-block" onclick="confirmMoveToRelease()">Move to Ready to Release</button>
+    </div>
+  </div>
+</div>
+
+<!-- Edit Ornament Modal -->
+<div class="modal-overlay" id="editOrnamentModal" style="display:none;">
+  <div class="modal">
+    <h2>Edit item</h2>
+    <p style="color:var(--ink-soft);font-size:13.5px;">For corrections while the item is still kept — e.g. re-weighed, a typo in the name, or purity re-checked.</p>
+    <input type="hidden" id="editOrnId">
+    <div class="field"><label>Item name *</label><input type="text" id="editOrnName" required></div>
+    <div class="grid grid-2">
+      <div class="field">
+        <label>Metal *</label>
+        <select id="editOrnMetal">
+          <option value="Gold">Gold</option>
+          <option value="Silver">Silver</option>
+        </select>
+      </div>
+      <div class="field"><label>Weight (g) *</label><input type="number" id="editOrnWeight" min="0" step="0.01" required></div>
+    </div>
+    <div class="grid grid-2">
+      <div class="field"><label>Qty *</label><input type="number" id="editOrnQty" min="1" step="1" required></div>
+      <div class="field" id="editOrnPurityField"><label>Purity (silver only)</label><input type="number" id="editOrnPurity" min="0" max="100" step="0.1"></div>
+    </div>
+    <div class="field"><label>Reason for this change</label><textarea id="editOrnReason" placeholder="e.g. Re-weighed on shop scale, was recorded wrong earlier"></textarea></div>
+    <div style="display:flex;gap:10px;">
+      <button type="button" class="btn btn-secondary btn-block" onclick="closeModal('editOrnamentModal')">Cancel</button>
+      <button type="button" class="btn btn-primary btn-block" id="saveOrnEditBtn" onclick="saveOrnamentEdit()">Save changes</button>
+    </div>
+  </div>
+</div>
+
+<!-- Edit Identity Remark Modal -->
+<div class="modal-overlay" id="identityModal" style="display:none;">
+  <div class="modal">
+    <h2>Locker note</h2>
+    <p style="color:var(--ink-soft);font-size:13.5px;">One note for the whole package — which bag/pack these items are kept in (e.g. "Blue pack, white bag, tag #3").</p>
+    <div class="field"><input type="text" id="identityInput" placeholder="e.g. Blue pack, white bag, tag #3"></div>
+    <div style="display:flex;gap:10px;">
+      <button type="button" class="btn btn-secondary btn-block" onclick="closeModal('identityModal')">Cancel</button>
+      <button type="button" class="btn btn-primary btn-block" onclick="saveIdentityRemark()">Save</button>
+    </div>
+  </div>
+</div>
+
+<!-- Edit Disbursement (amount/date) Modal -->
+<div class="modal-overlay" id="editDisbModal" style="display:none;">
+  <div class="modal">
+    <h2>Edit disbursement</h2>
+    <p style="color:var(--ink-soft);font-size:13.5px;">For correcting a data-entry mistake — e.g. wrong amount or date typed in originally.</p>
+    <input type="hidden" id="editDisbId">
+    <div class="grid grid-2">
+      <div class="field"><label>Amount (₹) *</label><input type="number" id="editDisbAmount" required min="1"></div>
+      <div class="field"><label>Date *</label><input type="date" id="editDisbDate" required></div>
+    </div>
+    <div class="grid grid-2">
+      <div class="field"><label>Reason</label><input type="text" id="editDisbReason"></div>
+      <div class="field"><label>Collected by</label><input type="text" id="editDisbCollector"></div>
+    </div>
+    <div class="field"><label>Reason for this correction</label><textarea id="editDisbNote" placeholder="e.g. Typo — was entered as 10,000 instead of 1,000"></textarea></div>
+    <div style="display:flex;gap:10px;">
+      <button type="button" class="btn btn-secondary btn-block" onclick="closeModal('editDisbModal')">Cancel</button>
+      <button type="button" class="btn btn-primary btn-block" id="saveDisbEditBtn" onclick="saveDisbursementEdit()">Save changes</button>
+    </div>
+  </div>
+</div>
+
+<!-- Edit Payment Modal -->
+<div class="modal-overlay" id="editPayModal" style="display:none;">
+  <div class="modal">
+    <h2>Edit payment</h2>
+    <p style="color:var(--ink-soft);font-size:13.5px;">For correcting a data-entry mistake — e.g. wrong amount typed in originally. Changing this automatically recomputes interest/principal from this point forward.</p>
+    <input type="hidden" id="editPayId">
+    <div class="field">
+      <label>Payment type</label>
+      <select id="editPayType">
+        <option value="interest">Interest only</option>
+        <option value="principal">Partial principal</option>
+        <option value="full">Full closure (principal + interest)</option>
+        <option value="advance_interest">Advance interest payment</option>
+      </select>
+    </div>
+    <div class="grid grid-2">
+      <div class="field"><label>Amount (₹) *</label><input type="number" id="editPayAmount" required min="1"></div>
+      <div class="field"><label>Date *</label><input type="date" id="editPayDate" required></div>
+    </div>
+    <div class="grid grid-2">
+      <div class="field"><label>Received by</label><input type="text" id="editPayReceiver"></div>
+      <div class="field"><label>Remarks</label><input type="text" id="editPayRemarks"></div>
+    </div>
+    <div class="field"><label>Reason for this correction</label><textarea id="editPayNote" placeholder="e.g. Typo — was entered as 20,000 instead of 2,000"></textarea></div>
+    <div style="display:flex;gap:10px;">
+      <button type="button" class="btn btn-secondary btn-block" onclick="closeModal('editPayModal')">Cancel</button>
+      <button type="button" class="btn btn-danger btn-block" id="deletePayBtn" onclick="deletePaymentFromEdit()">Delete</button>
+      <button type="button" class="btn btn-primary btn-block" id="savePayEditBtn" onclick="savePaymentEdit()">Save changes</button>
+    </div>
+  </div>
+</div>
+
+<!-- Edit Rate Modal -->
+<div class="modal-overlay" id="rateModal" style="display:none;">
+  <div class="modal">
+    <h2>Change interest rate</h2>
+    <p style="color:var(--ink-soft);font-size:13.5px;">Interest already counted at the old rate up to the effective date is locked in and won't change. Only interest after this date uses the new rate.</p>
+    <input type="hidden" id="rateModalDisbIndex">
+    <div class="grid grid-2">
+      <div class="field"><label>New rate (% / month) *</label><input type="number" id="newRateInput" required min="0" step="0.1"></div>
+      <div class="field"><label>Effective from *</label><input type="date" id="newRateDate" required></div>
+    </div>
+    <div class="field">
+      <label>Interest type</label>
+      <select id="newRateInterestType">
+        <option value="simple">Simple (standard)</option>
+        <option value="compound">Compounding (monthly)</option>
+            <option value="compound_annual">Compounding (annually)</option>
+      </select>
+    </div>
+    <div style="display:flex;gap:10px;margin-top:6px;">
+      <button type="button" class="btn btn-secondary btn-block" onclick="closeModal('rateModal')">Cancel</button>
+      <button type="button" class="btn btn-primary btn-block" id="saveRateBtn" onclick="saveRateChange()">Update rate</button>
+    </div>
+  </div>
+</div>
+
+<!-- Release Single Item Modal -->
+<div class="modal-overlay" id="itemReleaseModal" style="display:none;">
+  <div class="modal">
+    <h2>Release this item</h2>
+    <p style="color:var(--ink-soft);font-size:13.5px;" id="itemReleaseName"></p>
+    <input type="hidden" id="itemReleaseOrnId">
+    <p style="color:var(--ink-soft);font-size:13.5px;">Enter the amount the customer is paying to take this item back — it's applied the same way as any payment (interest first, then principal).</p>
+    <div class="grid grid-2">
+      <div class="field"><label>Amount received (₹) *</label><input type="number" id="itemReleaseAmount" required min="1"></div>
+      <div class="field"><label>Date *</label><input type="date" id="itemReleaseDate" required></div>
+    </div>
+    <div class="field"><label>Received by</label><input type="text" id="itemReleaseReceiver"></div>
+    <div class="field"><label>Remarks (optional)</label><textarea id="itemReleaseRemark" placeholder="e.g. Handed to customer's wife with ID verification"></textarea></div>
+    <div style="display:flex;gap:10px;margin-top:6px;">
+      <button type="button" class="btn btn-secondary btn-block" onclick="closeModal('itemReleaseModal')">Cancel</button>
+      <button type="button" class="btn btn-primary btn-block" id="saveItemReleaseBtn" onclick="saveItemRelease()">Release item</button>
+    </div>
+  </div>
+</div>
+
+<!-- Generate Receipt Modal -->
+<div class="modal-overlay" id="receiptPickerModal" style="display:none;">
+  <div class="modal">
+    <h2>Generate receipt</h2>
+    <div class="field">
+      <label>Receipt type</label>
+      <select id="receiptTypeSelect" onchange="updateReceiptContextField()">
+        <option value="loan">Loan Receipt — current loan summary</option>
+        <option value="payment">Payment Receipt — a specific payment</option>
+        <option value="interest">Interest Receipt — interest collected on a payment</option>
+        <option value="renewal">Renewal Receipt — a top-up/renewal disbursement</option>
+        <option value="gold_return">Item Return Receipt — a released item (gold or silver)</option>
+      </select>
+    </div>
+    <div class="field" id="receiptContextField" style="display:none;">
+      <label id="receiptContextLabel">Select</label>
+      <select id="receiptContextSelect"></select>
+    </div>
+    <p class="hint" id="receiptContextHint"></p>
+    <div class="field">
+      <label style="display:flex;align-items:center;gap:8px;font-weight:500;color:var(--ink);">
+        <input type="checkbox" id="captureSignatureCheckbox" style="width:auto;">
+        ✍️ Capture customer's signature digitally (optional — leave unchecked to just use the printed line)
+      </label>
+    </div>
+    <div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:6px;">
+      <button type="button" class="btn btn-secondary btn-block" onclick="closeModal('receiptPickerModal')">Cancel</button>
+      <button type="button" class="btn btn-secondary btn-block" id="receiptWhatsappBtn" onclick="handleGenerateReceipt('whatsapp')">💬 Share WhatsApp</button>
+      <button type="button" class="btn btn-primary btn-block" id="receiptPrintBtn" onclick="handleGenerateReceipt('print')">🖨 Print / Save PDF</button>
+    </div>
+  </div>
+</div>
+
+<!-- Signature Pad Modal -->
+<div class="modal-overlay" id="signaturePadModal" style="display:none;">
+  <div class="modal">
+    <h2>Customer signature</h2>
+    <p class="hint" style="margin-bottom:10px;">Hand the device to the customer to sign below, using a finger or stylus.</p>
+    <div style="border:2px dashed var(--line);border-radius:10px;background:#fff;">
+      <canvas id="sigPadCanvas" style="width:100%;height:180px;display:block;touch-action:none;"></canvas>
+    </div>
+    <div style="display:flex;gap:10px;margin-top:12px;">
+      <button type="button" class="btn btn-secondary btn-block" onclick="clearSignaturePad()">Clear</button>
+      <button type="button" class="btn btn-secondary btn-block" onclick="cancelSignaturePad()">Skip / use printed line</button>
+      <button type="button" class="btn btn-primary btn-block" id="sigPadUseBtn" onclick="useSignaturePad()" disabled>Use this signature</button>
+    </div>
+  </div>
+</div>
+
+<div id="printReceiptArea"></div>
+
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-storage-compat.js"></script>
+<script src="../js/firebase-config.js"></script>
+<script src="../js/auth.js"></script>
+<script src="../js/i18n.js"></script>
+<script src="../js/nav.js"></script>
+<script src="../js/theme.js"></script>
+<script src="../js/camera.js"></script>
+<script src="../js/interest.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+<script src="../js/crypto.js"></script>
+<script src="../js/gallery.js"></script>
+<script src="../js/receipt.js"></script>
+<script src="../js/signature-pad.js"></script>
+<script src="../js/loan-detail.js"></script>
+</body>
+</html>
