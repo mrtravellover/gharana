@@ -147,10 +147,14 @@ function renderPayments() {
   document.getElementById("payBody").innerHTML = payments.map((p) => {
     const bd = breakdown.find((b) => b.isAdvanceInterest && Math.abs(toJsDate(b.date) - toJsDate(p.date)) < 1000 && b.amount === Number(p.amount));
     const splitNote = bd ? `<div class="hint" style="margin-top:2px;">${fmtMoney(bd.settledPortion)} settled interest, ${fmtMoney(bd.creditPortion)} became credit</div>` : "";
+    const targetDisb = p.targetDisbursementId ? disbursements.find((d) => d.id === p.targetDisbursementId) : null;
+    const targetNote = p.targetDisbursementId
+      ? `<div class="hint" style="margin-top:2px;">→ ${targetDisb ? fmtDate(targetDisb.date) + " disbursement only" : "a since-removed disbursement"}</div>`
+      : "";
     return `
     <tr>
       <td>${fmtDate(p.date)}</td>
-      <td style="text-transform:capitalize;">${p.type === "advance_interest" ? "Advance interest" : p.type}${splitNote}</td>
+      <td style="text-transform:capitalize;">${p.type === "advance_interest" ? "Advance interest" : p.type}${splitNote}${targetNote}</td>
       <td class="mono">${fmtMoney(p.amount)}</td>
       <td>${escapeHtml(p.receivedBy || "—")}</td>
       <td>${escapeHtml(p.remarks || "—")}</td>
@@ -197,8 +201,27 @@ function openDisbModal() { openModal("disbModal"); }
 function openPayModal() {
   document.getElementById("mPayType").value = "interest";
   updatePayTypeHint();
+  populatePayTargetSelector();
   renderRateQuickEditRows("payRateRows", "payModal");
   openModal("payModal");
+}
+
+function populatePayTargetSelector() {
+  const field = document.getElementById("payTargetField");
+  const select = document.getElementById("mPayTarget");
+  const openDisbursements = disbursements.filter((d) => {
+    const s = window._loanSummary && window._loanSummary.perDisbursement.find((p) => p.id === d.id);
+    return !s || !s.settled; // only offer disbursements that still have something outstanding
+  });
+
+  if (openDisbursements.length <= 1) {
+    field.style.display = "none";
+    select.value = "";
+    return;
+  }
+  field.style.display = "block";
+  select.innerHTML = `<option value="">All disbursements (oldest first, as usual)</option>` +
+    openDisbursements.map((d) => `<option value="${d.id}">${fmtDate(d.date)} — ${fmtMoney(d.amount)} @ ${d.rate}%</option>`).join("");
 }
 
 function updatePayTypeHint() {
@@ -260,15 +283,18 @@ async function savePayment(e) {
   e.preventDefault();
   const amount = parseFloat(document.getElementById("mPayAmount").value);
   const type = document.getElementById("mPayType").value;
+  const targetDisbursementId = document.getElementById("mPayTarget").value || null;
   await loanRef.collection("payments").add({
     type,
     amount,
     date: firebase.firestore.Timestamp.fromDate(new Date(document.getElementById("mPayDate").value)),
     receivedBy: document.getElementById("mPayReceiver").value.trim(),
     remarks: document.getElementById("mPayRemarks").value.trim(),
+    targetDisbursementId,
     createdAt: firebase.firestore.FieldValue.serverTimestamp(),
   });
-  await logActivity({ customerId: loanData.customerId, loanId, eventType: type === "interest" || type === "advance_interest" ? "interest_collected" : "partial_payment", action: "Payment recorded", detail: `${fmtMoney(amount)} (${type === "advance_interest" ? "advance interest" : type})` });
+  const targetNote = targetDisbursementId ? " (targeted to one disbursement)" : "";
+  await logActivity({ customerId: loanData.customerId, loanId, eventType: type === "interest" || type === "advance_interest" ? "interest_collected" : "partial_payment", action: "Payment recorded", detail: `${fmtMoney(amount)} (${type === "advance_interest" ? "advance interest" : type})${targetNote}` });
   closeModal("payModal");
   document.getElementById("payForm").reset();
   toast("Payment recorded");
@@ -653,6 +679,17 @@ function openEditPayModal(payId) {
   document.getElementById("editPayReceiver").value = p.receivedBy || "";
   document.getElementById("editPayRemarks").value = p.remarks || "";
   document.getElementById("editPayNote").value = "";
+
+  const targetField = document.getElementById("editPayTargetField");
+  const targetSelect = document.getElementById("editPayTarget");
+  if (disbursements.length > 1) {
+    targetField.style.display = "block";
+    targetSelect.innerHTML = `<option value="">All disbursements (oldest first, as usual)</option>` +
+      disbursements.map((d) => `<option value="${d.id}">${fmtDate(d.date)} — ${fmtMoney(d.amount)} @ ${d.rate}%</option>`).join("");
+    targetSelect.value = p.targetDisbursementId || "";
+  } else {
+    targetField.style.display = "none";
+  }
   openModal("editPayModal");
 }
 
@@ -668,6 +705,7 @@ async function savePaymentEdit() {
 
   const newType = document.getElementById("editPayType").value;
   const newDate = firebase.firestore.Timestamp.fromDate(new Date(newDateStr));
+  const newTarget = document.getElementById("editPayTarget").value || null;
 
   const updated = {
     type: newType,
@@ -675,6 +713,7 @@ async function savePaymentEdit() {
     date: newDate,
     receivedBy: document.getElementById("editPayReceiver").value.trim(),
     remarks: document.getElementById("editPayRemarks").value.trim(),
+    targetDisbursementId: newTarget,
   };
 
   await loanRef.collection("payments").doc(payId).update(updated);
@@ -683,6 +722,7 @@ async function savePaymentEdit() {
   if (p.amount !== newAmount) changes.push(`amount ${fmtMoney(p.amount)} → ${fmtMoney(newAmount)}`);
   if (toJsDate(p.date).toDateString() !== new Date(newDateStr).toDateString()) changes.push(`date ${fmtDate(p.date)} → ${fmtDate(newDate)}`);
   if (p.type !== newType) changes.push(`type ${p.type} → ${newType}`);
+  if ((p.targetDisbursementId || null) !== newTarget) changes.push("target disbursement changed");
   const note = document.getElementById("editPayNote").value.trim();
   await logActivity({ customerId: loanData.customerId, loanId, eventType: "loan_edited", action: "Payment edited", detail: `${changes.join(", ") || "no change"}${note ? ` — ${note}` : ""}` });
 
