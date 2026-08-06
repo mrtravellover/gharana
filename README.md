@@ -204,6 +204,18 @@ The "Payment type" dropdown (interest / partial principal / full closure) is jus
 - ✅ Audit trail — every disbursement, payment, rate change, item release, ready-to-release move, and closure is logged with who did it and when, shown in an "Activity" section on each loan page
 - ✅ Multi-period report comparison (today/month/quarter/half-year/year, current vs previous two) — see Reports above
 
+## Targeted payments — pay off one specific disbursement without touching others (new)
+
+A real gap you found: with more than one disbursement on a loan, every payment always went to the oldest one first (the FIFO waterfall) — there was no way to pay off a newer, smaller disbursement on its own if an older one was still outstanding.
+
+Fixed with an optional "Apply this payment to" selector, on both Add Payment and Edit Payment — only shown when a loan actually has more than one disbursement (a single-disbursement loan never sees it, since there's nothing to choose between). Pick a specific disbursement and the payment applies its interest and principal to that one only, leaving every other disbursement on the loan completely untouched — still accruing its own interest normally, at its own rate, on its own schedule. Leave it on the default ("All disbursements, oldest first") and everything works exactly as it always has.
+
+**Built to reuse the existing, already-tested payment logic rather than duplicate it** — targeting a disbursement just narrows which disbursement(s) the existing full/partial/shortfall logic considers, rather than being a separate code path with its own risk of drifting out of sync. Verified directly: paying off a second, smaller disbursement in full (principal + its own interest) leaves the first, larger disbursement completely unchanged — same principal, same accrual, as if the payment never happened from its perspective. Also reran the full existing test suite (single-disbursement loans, the rounding-spillover fix, Advance Interest) to confirm none of it regressed.
+
+If a payment references a disbursement that's since been removed somehow, it safely falls back to normal FIFO rather than the payment silently applying nowhere.
+
+Touches: `pages/loan-detail.html` (the selector, on both Add and Edit), `js/loan-detail.js` (populating it, saving/editing the target), `js/interest.js` (the actual targeting logic).
+
 ## Minimum interest period rule removed entirely — pure day-wise, always, no exceptions
 
 A one-time "1 month minimum, then day-wise forever" rule was built and refined across several rounds of testing (documented in prior versions of this file). In practice it added real confusion — different disbursements behaving differently depending on history, a note that could mislead, edge cases needing careful tracking. Rather than keep patching it, the rule has been **removed completely, on your explicit instruction**: every disbursement, on every loan, always uses pure exact day-wise interest (the 365/366-day actual-calendar method) from day one — no floor, no minimum, no special first-month treatment, no exceptions for top-ups or reactivations. This is simpler, more predictable, and removes an entire category of the bugs found while the minimum rule existed.
