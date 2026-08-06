@@ -1,5 +1,6 @@
 // ============================================================
-// INTEREST ENGINE — 365/366-day (actual/actual) method
+// INTEREST ENGINE — 365/366-day (actual/actual) method, pure day-wise,
+// no minimum charge of any kind.
 // Method: Principal × (annual rate / 100) × year-fraction, where the
 // year-fraction counts real elapsed days against the REAL length of
 // whichever calendar year(s) they fall in (365, or 366 in a leap year) —
@@ -9,15 +10,11 @@
 // length, so leap years are handled correctly either side of the split.
 //
 // This is the SAME method for every disbursement on every loan — first
-// disbursement, top-ups, re-lends, all identical. It also applies
-// retroactively: today's interest-due figure on every loan, active or
-// closed-then-reopened, is computed this way now.
-//
-// MINIMUM CHARGE: a floor of 1 month's worth of interest (Principal ×
-// monthly rate%) always applies once any time has passed at all, however
-// short — so 1 day still owes 1 month's interest, same as before. Above
-// that floor, interest is fully continuous/exact — no rounding to whole
-// months, no "10 months, minimum rule" style billing brackets.
+// disbursement, top-ups, re-lends, all identical, from day one. No 1-month
+// minimum, no floor of any kind — interest is exact from the very first
+// day, for every rupee, every time. (A separate function below,
+// periodInterest(), still carries a minimum-charge floor — that one is
+// used only by the unrelated Surplus Deposits feature, not loans.)
 //
 // Rate is entered manually per disbursement (varies per customer).
 // ============================================================
@@ -35,19 +32,6 @@ function toJsDate(d) {
 
 function isLeapYear(y) {
   return (y % 4 === 0 && y % 100 !== 0) || y % 400 === 0;
-}
-
-// "Same date next month" — e.g. 3-Jun -> 3-Jul. If the target month is
-// shorter and doesn't have that day (31-Jan -> Feb), rolls back to the
-// target month's last real day rather than overflowing into March.
-function addOneMonth(date) {
-  const d = toJsDate(date);
-  const targetMonth = d.getMonth() + 1;
-  const result = new Date(d.getFullYear(), targetMonth, d.getDate());
-  if (result.getMonth() !== ((targetMonth % 12) + 12) % 12) {
-    return new Date(d.getFullYear(), targetMonth + 1, 0); // last real day of the target month
-  }
-  return result;
 }
 
 // Continuous year-fraction between two dates, weighting each calendar-year
@@ -86,12 +70,8 @@ function formatDuration(days) {
 
 /**
  * Raw day-based interest with NO floor — Principal × (annual rate / 100) ×
- * year-fraction, using the real-calendar (365/366-day) method above. Used
- * directly by the loan engine's day-wise mode (see computeTotalDue
- * further below), where the minimum-period mechanism already handles the
- * "1 month minimum" requirement explicitly and precisely — applying
- * periodInterest()'s blanket floor on top of that would double up the
- * minimum incorrectly.
+ * year-fraction, using the real-calendar (365/366-day) method above. This
+ * is what the loan engine uses for everything now — pure day-wise, always.
  */
 function rawInterest(principal, monthlyRatePct, fromDate, toDate, type) {
   const days = daysBetween(fromDate, toDate);
@@ -121,12 +101,10 @@ function rawInterest(principal, monthlyRatePct, fromDate, toDate, type) {
 /**
  * Interest on a principal from fromDate to toDate, at a given MONTHLY
  * rate, using the real-calendar (365/366-day) method above, WITH a floor
- * of 1 month's interest applied once any time has passed. Used by the
- * Surplus Deposits feature (customer-profile.js, owl-assistant.js) —
- * unchanged. The loan engine itself no longer uses this floor directly
- * (see rawInterest above, and computeTotalDue below) — its minimum-period
- * handling supersedes it with a precise, once-only rule instead of a
- * blanket floor reapplied on every accrual period.
+ * of 1 month's interest applied once any time has passed. Used ONLY by
+ * the Surplus Deposits feature (customer-profile.js, owl-assistant.js) —
+ * a separate, unrelated feature from loans. The loan engine below uses
+ * rawInterest() (no floor) exclusively.
  *
  * INTEREST TYPE: "simple" (the standard method above), "compound"
  * (continuously compounds using the exact elapsed months as a fractional
@@ -161,67 +139,26 @@ function periodInterest(principal, monthlyRatePct, fromDate, toDate, type) {
  */
 function calcLoanSummary(disbursements, payments = [], asOfDate = new Date()) {
   const sortedDisbursements = [...disbursements].sort((a, b) => toJsDate(a.date) - toJsDate(b.date));
-  const states = sortedDisbursements.map((d, idx) => {
+  const states = sortedDisbursements.map((d) => {
       const history = (d.rateHistory && d.rateHistory.length ? d.rateHistory : [{ date: d.date, rate: d.rate }])
         .slice()
         .sort((a, b) => toJsDate(a.date) - toJsDate(b.date));
-      // Whether this disbursement gets the one-time "1 month minimum, then
-      // day-wise forever" treatment: the loan's very first disbursement,
-      // or one that reactivated a released loan — both set explicitly via
-      // startsMinimumPeriod when the disbursement is created. Disbursements
-      // from before this field existed fall back to "only the earliest one
-      // qualifies" — the best available default for old data, and it's the
-      // correct behavior for the very common case of a single-disbursement loan.
-      const usesMinimumRule = d.startsMinimumPeriod !== undefined ? !!d.startsMinimumPeriod : idx === 0;
-      const minimumRequired = usesMinimumRule ? round2(d.amount * (history[0].rate / 100)) : 0;
       return {
         id: d.id,
         originalDate: d.date,
         originalAmount: d.amount,
         principal: d.amount,
         periodStart: toJsDate(d.date),
-        unpaidInterest: usesMinimumRule ? minimumRequired : 0,
+        unpaidInterest: 0,
         rate: history[0].rate,
         interestType: d.interestType || "simple",
         pendingRateChanges: history.slice(1),
-        usesMinimumRule,
-        minimumRequired,
-        minimumWindowEnd: usesMinimumRule ? addOneMonth(d.date) : null,
-        minimumTransitioned: false,
       };
     });
 
-  // Computes how much interest is currently due for a disbursement, and
-  // (as a side effect) permanently transitions it out of the minimum-period
-  // phase the first time it's queried at or after the window's end date.
-  //
-  // Disbursements NOT using the minimum rule (or already transitioned past
-  // it) behave exactly as before: unpaidInterest + newly-accrued day-wise
-  // interest since periodStart.
-  //
-  // Disbursements still WITHIN their minimum window behave completely
-  // differently, per the locked business rule: the entire first month's
-  // interest is due in full from day one — not a day-by-day growing
-  // amount — and however many payments it takes to fully cover that fixed
-  // amount, NOTHING further is owed until the window's calendar end date,
-  // no matter how many times the customer pays in between. unpaidInterest
-  // here IS that remaining fixed amount — it starts at the full minimum
-  // and only ever decreases as payments settle it; it does not grow with
-  // time the way it does outside the window.
+  // How much interest is currently due for a disbursement — always pure
+  // day-wise from periodStart to queryDate, no floor, no exceptions.
   function computeTotalDue(s, queryDate) {
-    if (!s.usesMinimumRule || s.minimumTransitioned) {
-      return round2(s.unpaidInterest + rawInterest(s.principal, s.rate, s.periodStart, queryDate, s.interestType));
-    }
-    if (queryDate < s.minimumWindowEnd) {
-      return round2(Math.max(0, s.unpaidInterest));
-    }
-    // Window has ended: whatever's still unpaid toward the minimum stays
-    // owed, and day-wise interest now starts fresh from the window's end
-    // date — permanently, for the rest of this disbursement's life. No
-    // floor from here on — rawInterest(), not periodInterest() — the
-    // minimum requirement has already been fully accounted for above.
-    s.minimumTransitioned = true;
-    s.periodStart = s.minimumWindowEnd;
     return round2(s.unpaidInterest + rawInterest(s.principal, s.rate, s.periodStart, queryDate, s.interestType));
   }
 
@@ -331,11 +268,9 @@ function calcLoanSummary(disbursements, payments = [], asOfDate = new Date()) {
         // progress there (doesn't fully cover its due interest) — almost
         // always just a rounding-level difference between a manually
         // estimated payoff amount and the app's precise day-based
-        // calculation (see README), not a deliberate payment toward this
-        // disbursement. Leaving it untouched matters: resetting its clock
-        // here would prematurely lock in a full month's minimum interest
-        // on a disbursement nobody actually paid anything meaningful
-        // toward. The leftover is simply not applied anywhere further.
+        // calculation, not a deliberate payment toward this disbursement.
+        // Leaving it untouched keeps its accrual clean and unaffected by
+        // an incidental amount nobody actually intended for it.
         remaining = 0;
       }
       isFirstTouchedState = false;
@@ -345,22 +280,18 @@ function calcLoanSummary(disbursements, payments = [], asOfDate = new Date()) {
 
   // Final open period, as of today (or asOfDate)
   const perDisbursement = states.map((s) => {
-    const stillInWindow = s.usesMinimumRule && !s.minimumTransitioned && toJsDate(asOfDate) < s.minimumWindowEnd;
-    const interest = computeTotalDue(s, toJsDate(asOfDate)); // may transition s.minimumTransitioned/s.periodStart as a side effect
-    const days = daysBetween(stillInWindow ? s.originalDate : s.periodStart, asOfDate);
-    const floorValue = round2(s.principal * (s.rate / 100));
-    const minimumApplied = stillInWindow ? days > 0 : (days > 0 && interest <= floorValue + 0.01);
+    const interest = computeTotalDue(s, toJsDate(asOfDate));
+    const days = daysBetween(s.periodStart, asOfDate);
     return {
       id: s.id,
       originalDate: s.originalDate,
-      effectiveDate: stillInWindow ? s.originalDate : s.periodStart,
+      effectiveDate: s.periodStart,
       dateChanged: toJsDate(s.periodStart).getTime() !== toJsDate(s.originalDate).getTime(),
       rate: s.rate,
       interestType: s.interestType,
       originalAmount: s.originalAmount,
       principal: s.principal,
       days,
-      minimumApplied,
       interest,
       settled: s.principal <= 0 && interest <= 0,
     };
@@ -374,9 +305,7 @@ function calcLoanSummary(disbursements, payments = [], asOfDate = new Date()) {
   // If there's an active advance-interest credit (interestOutstanding
   // negative), project forward — with no further payments assumed — to
   // find the date it naturally gets used up by ongoing accrual. Day-by-day
-  // search rather than a closed-form formula, since the 1-month-minimum
-  // floor rule (which also applies here — see README) makes a clean
-  // algebraic solution messy; a loop is simple, cheap, and exact.
+  // search rather than a closed-form formula, kept simple and exact.
   const advanceCreditRemaining = interestOutstanding < 0 ? Math.abs(interestOutstanding) : 0;
   let creditExhaustionDate = null;
   if (advanceCreditRemaining > 0) {
