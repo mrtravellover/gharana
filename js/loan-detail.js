@@ -13,6 +13,7 @@ requireAuth(async () => {
   document.getElementById("mPayDate").valueAsDate = new Date();
   wirePhotoCapture("mDisbPhotoBtn", "mDisbPhotoPreview", (file) => { capturedDisbPhoto = file; });
   wirePhotoCapture("returnPhotoBtn", "returnPhotoPreview", (file) => { capturedReturnPhoto = file; });
+  await loadEmailToNameMap();
   await loadAll();
   if (typeof initGallery === "function") await initGallery();
   if (typeof loadShopInfo === "function") await loadShopInfo();
@@ -43,6 +44,20 @@ async function loadAll() {
   await renderActivityLog();
 }
 
+let emailToName = {};
+
+async function loadEmailToNameMap() {
+  try {
+    const snap = await db.collection("userProfiles").get();
+    snap.docs.forEach((doc) => {
+      const d = doc.data();
+      if (d.email && d.displayName) emailToName[d.email] = d.displayName;
+    });
+  } catch (err) {
+    console.error("Couldn't load display names:", err);
+  }
+}
+
 async function renderActivityLog() {
   const el = document.getElementById("activityLog");
   try {
@@ -50,9 +65,14 @@ async function renderActivityLog() {
     if (snap.empty) { el.innerHTML = `<p style="color:var(--ink-soft);font-size:13.5px;">No activity recorded yet.</p>`; return; }
     const entries = snap.docs.map((doc) => doc.data());
     entries.sort((a, b) => toJsDate(b.at) - toJsDate(a.at)); // sort here instead of in the query, so no composite index is needed
-    el.innerHTML = entries.slice(0, 30).map((a) => `
-      <div class="row" style="font-size:13px;margin-bottom:6px;"><span class="k">${fmtDate(a.at)} — ${escapeHtml(a.byEmail)}</span><span>${escapeHtml(a.action)}${a.detail ? `: ${escapeHtml(a.detail)}` : ""}</span></div>
-    `).join("");
+    el.innerHTML = entries.slice(0, 30).map((a) => {
+      const actorName = emailToName[a.byEmail] || (a.byEmail || "").split("@")[0] || "Someone";
+      return `
+      <div style="font-size:13px;margin-bottom:10px;padding-bottom:10px;border-bottom:1px dashed var(--line);">
+        <div><strong>${escapeHtml(actorName)}</strong> — ${escapeHtml(a.action)}${a.detail ? `: ${escapeHtml(a.detail)}` : ""}</div>
+        <div class="hint" style="margin-top:2px;">${fmtDate(a.at)}</div>
+      </div>`;
+    }).join("");
   } catch (err) {
     console.error("Activity log query failed:", err);
     el.innerHTML = `<p style="color:var(--ink-soft);font-size:13.5px;">Couldn't load activity right now.</p>`;
@@ -168,14 +188,29 @@ function renderStatusActions() {
   const balance = window._loanSummary.totalPayableToday;
 
   if (loanData.status === "active") {
-    card.innerHTML = `
-      <h2>Release workflow</h2>
-      <div class="divider-dashed"></div>
-      <p style="color:var(--ink-soft);font-size:13.5px;">
-        ${balance > 0 ? `Balance still outstanding: <strong>${fmtMoney(balance)}</strong>.` : "Balance is fully cleared."}
-      </p>
-      <button class="btn btn-primary" onclick="openReleaseConfirmModal()">Mark ready to release</button>
-    `;
+    if (loanData.hasCollateral === false) {
+      // No pledged items means there's nothing physical to "release" —
+      // skip that intermediate step entirely and go straight to closing
+      // once the balance is settled, rather than a release stage that
+      // wouldn't mean anything for a loan with no collateral.
+      card.innerHTML = `
+        <h2>Close this loan</h2>
+        <div class="divider-dashed"></div>
+        <p style="color:var(--ink-soft);font-size:13.5px;">No collateral on this loan, so there's nothing to physically release.
+          ${balance > 0 ? `Balance still outstanding: <strong>${fmtMoney(balance)}</strong>.` : "Balance is fully cleared."}
+        </p>
+        <button class="btn btn-primary" onclick="openReturnModal()">Close loan</button>
+      `;
+    } else {
+      card.innerHTML = `
+        <h2>Release workflow</h2>
+        <div class="divider-dashed"></div>
+        <p style="color:var(--ink-soft);font-size:13.5px;">
+          ${balance > 0 ? `Balance still outstanding: <strong>${fmtMoney(balance)}</strong>.` : "Balance is fully cleared."}
+        </p>
+        <button class="btn btn-primary" onclick="openReleaseConfirmModal()">Mark ready to release</button>
+      `;
+    }
   } else if (loanData.status === "released") {
     card.innerHTML = `
       <h2>Return the jewellery</h2>
@@ -197,7 +232,78 @@ function renderStatusActions() {
   }
 }
 
-function openDisbModal() { openModal("disbModal"); }
+function openDisbModal() {
+  document.getElementById("mDisbDate").valueAsDate = new Date(); // reset fresh every time - previously only set once at page load, so it could go stale if the page stayed open a while before this was used
+  document.getElementById("disbOrnamentRows").innerHTML = "";
+  document.getElementById("disbOrnamentTotals").textContent = "";
+  openModal("disbModal");
+}
+
+function addDisbOrnamentRow() {
+  const tpl = document.getElementById("disbOrnamentRowTemplate");
+  const clone = tpl.content.cloneNode(true);
+  const row = clone.querySelector("[data-row]");
+
+  const metalSelect = row.querySelector(".orn-metal");
+  const purityField = row.querySelector(".orn-purity-field");
+  const categoryField = row.querySelector(".orn-category-field");
+  const purityInput = row.querySelector(".orn-purity");
+  const categoryInput = row.querySelector(".orn-category");
+  const weightInput = row.querySelector(".orn-weight");
+
+  function syncSilverFields() {
+    const isSilver = metalSelect.value === "Silver";
+    purityField.style.display = isSilver ? "" : "none";
+    categoryField.style.display = isSilver ? "" : "none";
+    if (isSilver) updateCategory();
+  }
+  function updateCategory() {
+    categoryInput.value = silverCategory(purityInput.value);
+  }
+
+  metalSelect.addEventListener("change", syncSilverFields);
+  purityInput.addEventListener("input", updateCategory);
+  weightInput.addEventListener("input", updateDisbOrnamentTotals);
+  metalSelect.addEventListener("change", updateDisbOrnamentTotals);
+  row.querySelector(".orn-qty").addEventListener("input", updateDisbOrnamentTotals);
+
+  syncSilverFields();
+  document.getElementById("disbOrnamentRows").appendChild(row);
+  updateDisbOrnamentTotals();
+}
+
+function updateDisbOrnamentTotals() {
+  const rows = document.querySelectorAll("#disbOrnamentRows [data-row]");
+  let goldWt = 0, silverWt = 0, count = 0;
+  rows.forEach((r) => {
+    const metal = r.querySelector(".orn-metal").value;
+    const wt = parseFloat(r.querySelector(".orn-weight").value) || 0;
+    const qty = parseFloat(r.querySelector(".orn-qty").value) || 0;
+    count += qty;
+    if (metal === "Gold") goldWt += wt * qty; else silverWt += wt * qty;
+  });
+  const parts = [];
+  if (count) parts.push(`${count} item(s)`);
+  if (goldWt) parts.push(`${goldWt.toFixed(2)}g gold`);
+  if (silverWt) parts.push(`${silverWt.toFixed(2)}g silver`);
+  document.getElementById("disbOrnamentTotals").textContent = parts.length ? "Total: " + parts.join(" · ") : "";
+}
+
+function collectDisbOrnaments() {
+  return [...document.querySelectorAll("#disbOrnamentRows [data-row]")].map((r) => {
+    const metal = r.querySelector(".orn-metal").value;
+    return {
+      itemName: r.querySelector(".orn-name").value.trim(),
+      metalType: metal,
+      weight: parseFloat(r.querySelector(".orn-weight").value) || 0,
+      qty: parseFloat(r.querySelector(".orn-qty").value) || 1,
+      purity: metal === "Silver" ? (r.querySelector(".orn-purity").value || "") : "",
+      category: metal === "Silver" ? r.querySelector(".orn-category").value : "",
+      released: false,
+      notes: "",
+    };
+  }).filter((o) => o.itemName); // skip any accidentally-empty rows
+}
 function openPayModal() {
   document.getElementById("mPayType").value = "interest";
   updatePayTypeHint();
@@ -259,8 +365,20 @@ async function saveDisbursement(e) {
     }
   }
 
+  const newOrnaments = collectDisbOrnaments();
+  if (newOrnaments.length) {
+    const batch = db.batch();
+    newOrnaments.forEach((o) => {
+      batch.set(loanRef.collection("ornaments").doc(), o);
+    });
+    await batch.commit();
+    if (loanData.hasCollateral === false) {
+      await loanRef.update({ hasCollateral: true });
+    }
+  }
+
   const disbAmount = parseFloat(document.getElementById("mDisbAmount").value);
-  await logActivity({ customerId: loanData.customerId, loanId, eventType: "disbursement", action: "Disbursement added", detail: `${fmtMoney(disbAmount)} at ${rate}%` });
+  await logActivity({ customerId: loanData.customerId, loanId, eventType: "disbursement", action: "Disbursement added", detail: `${fmtMoney(disbAmount)} at ${rate}%${newOrnaments.length ? ` + ${newOrnaments.length} new item(s)` : ""}` });
 
   // If this mortgage was sitting in "ready to release" and the customer needs money again
   // before pickup, giving a new disbursement brings it back to active automatically.
@@ -347,6 +465,7 @@ function openReturnModal() {
   } else {
     wrap.innerHTML = `<div style="background:var(--good-soft);border-radius:8px;padding:10px 14px;margin-bottom:12px;color:var(--good);font-weight:600;font-size:14px;">Fully paid — nothing due.</div>`;
   }
+  document.getElementById("returnPhotoSection").style.display = loanData.hasCollateral === false ? "none" : "block";
   document.getElementById("returnCloseDate").valueAsDate = new Date();
   document.getElementById("returnCloseRemark").value = "";
   openModal("returnModal");
@@ -393,6 +512,24 @@ async function confirmReturn() {
   }
 
   await loanRef.update(updateData);
+
+  // Closing the whole loan means every pledged item is being handed back
+  // together — mark any ornament not already individually released as
+  // released now too, so the data itself is correct going forward (not
+  // just papered over when generating a receipt later).
+  const unreleased = ornaments.filter((o) => !o.released);
+  if (unreleased.length) {
+    const batch = db.batch();
+    unreleased.forEach((o) => {
+      batch.update(loanRef.collection("ornaments").doc(o.id), {
+        released: true,
+        releasedAt: closeDate,
+        releaseRemark: returnRemark || "Released as part of full loan closure",
+      });
+    });
+    await batch.commit();
+  }
+
   await logActivity({ customerId: loanData.customerId, loanId, eventType: "loan_closed", action: "Loan closed", detail: balance > 0 ? `Final settlement ${fmtMoney(balance)} collected` : "Fully paid" });
 
   closeModal("returnModal");
@@ -409,6 +546,25 @@ function openReceiptPicker() {
   document.getElementById("captureSignatureCheckbox").checked = false;
   updateReceiptContextField();
   openModal("receiptPickerModal");
+}
+
+// Items eligible for an Item Return Receipt — includes ornaments
+// individually released (via the per-item release flow) AND, if the whole
+// loan has been closed, every ornament on it, even ones never explicitly
+// marked released one-by-one. A loan closed via the whole-loan return flow
+// clearly means every pledged item was handed back together, but that
+// flow never touched each ornament's own released flag — only the loan's
+// own status/closedAt/returnPhotoUrl. Without this, a fully closed loan
+// with a captured return photo would show nothing to select here at all.
+function getReturnableItems() {
+  const isClosed = loanData && loanData.status === "closed";
+  return ornaments
+    .filter((o) => o.released || isClosed)
+    .map((o) => ({
+      ...o,
+      releasedAt: o.released ? o.releasedAt : loanData.closedAt,
+      releaseRemark: o.released ? o.releaseRemark : loanData.returnRemark,
+    }));
 }
 
 function updateReceiptContextField() {
@@ -438,7 +594,7 @@ function updateReceiptContextField() {
     select.innerHTML = disbursements.slice(1).map((d, i) => `<option value="${i + 1}">${fmtDate(d.date)} — ${fmtMoney(d.amount)}</option>`).join("");
   } else if (type === "gold_return") {
     label.textContent = "Select released item";
-    const released = ornaments.filter((o) => o.released);
+    const released = getReturnableItems();
     if (!released.length) { hint.textContent = "No items have been released on this loan yet."; return; }
     select.innerHTML = released.map((o, i) => `<option value="${i}">${escapeHtml(o.itemName)} (${o.weight}g)</option>`).join("");
   }
@@ -477,7 +633,7 @@ async function handleGenerateReceipt(action) {
     ctx.disbursement = disbursements[idx];
   } else if (type === "gold_return") {
     const idx = parseInt(document.getElementById("receiptContextSelect").value, 10);
-    const released = ornaments.filter((o) => o.released);
+    const released = getReturnableItems();
     if (isNaN(idx) || !released[idx]) { toast("Select an item first"); return; }
     ctx.ornament = released[idx];
   }
