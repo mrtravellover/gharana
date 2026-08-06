@@ -144,6 +144,13 @@
         </select>
         <div class="hint" id="payTypeHint">Just a label for your records — every payment automatically clears interest due first, then reduces principal.</div>
       </div>
+      <div class="field" id="payTargetField" style="display:none;">
+        <label>Apply this payment to</label>
+        <select id="mPayTarget">
+          <option value="">All disbursements (oldest first, as usual)</option>
+        </select>
+        <div class="hint">Choose a specific disbursement to pay off that one only — its own interest and principal — without touching any others on this loan.</div>
+      </div>
       <div class="grid grid-2">
         <div class="field"><label>Amount (₹) *</label><input type="number" id="mPayAmount" required min="1"></div>
         <div class="field"><label>Date *</label><input type="date" id="mPayDate" required></div>
@@ -292,6 +299,12 @@
         <option value="principal">Partial principal</option>
         <option value="full">Full closure (principal + interest)</option>
         <option value="advance_interest">Advance interest payment</option>
+      </select>
+    </div>
+    <div class="field" id="editPayTargetField" style="display:none;">
+      <label>Apply this payment to</label>
+      <select id="editPayTarget">
+        <option value="">All disbursements (oldest first, as usual)</option>
       </select>
     </div>
     <div class="grid grid-2">
