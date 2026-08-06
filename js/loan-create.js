@@ -312,7 +312,6 @@ async function saveLoan(e) {
     reason: document.getElementById("disbReason").value.trim(),
     collectedBy: document.getElementById("disbCollector").value.trim(),
     notes: document.getElementById("disbNotes").value.trim(),
-    startsMinimumPeriod: true, // always true - this is a brand new loan's first-ever disbursement
     createdAt: firebase.firestore.FieldValue.serverTimestamp(),
   });
 
