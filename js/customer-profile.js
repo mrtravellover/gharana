@@ -1,7 +1,20 @@
 let custLoans = [];
 let custDeposits = [];
+let emailToName = {};
 
 const custId = new URLSearchParams(location.search).get("id");
+
+async function loadEmailToNameMap() {
+  try {
+    const snap = await db.collection("userProfiles").get();
+    snap.docs.forEach((doc) => {
+      const d = doc.data();
+      if (d.email && d.displayName) emailToName[d.email] = d.displayName;
+    });
+  } catch (err) {
+    console.error("Couldn't load display names:", err);
+  }
+}
 
 requireAuth(async () => {
   renderShell({ active: "customers", title: "Customer Profile" });
@@ -13,6 +26,7 @@ requireAuth(async () => {
   setupWithdrawModeCards();
   document.getElementById("timelineSearchInput").addEventListener("input", (e) => renderTimeline(e.target.value));
   setupTimelineInfiniteScroll();
+  await loadEmailToNameMap();
   await loadProfile();
   await loadDeposits();
   await loadMoreTimeline();
@@ -443,6 +457,7 @@ async function loadMoreTimeline() {
   if (timelineLoading || !timelineHasMore) return;
   timelineLoading = true;
   document.getElementById("timelineLoadingRow").style.display = "flex";
+  let loadError = false;
 
   try {
     let q = db.collection("activityLog").where("customerId", "==", custId).orderBy("at", "desc").limit(20);
@@ -457,13 +472,23 @@ async function loadMoreTimeline() {
   } catch (err) {
     console.error("Timeline load failed:", err);
     if (timelineEvents.length === 0) {
-      document.getElementById("timelineContainer").innerHTML = `<p style="color:var(--ink-soft);font-size:13.5px;">Couldn't load the timeline right now.</p>`;
+      loadError = true;
+      const isIndexError = err.code === "failed-precondition" || /index/i.test(err.message || "");
+      document.getElementById("timelineContainer").innerHTML = isIndexError
+        ? `<p style="color:var(--danger);font-size:13.5px;">Timeline needs a one-time Firestore index that hasn't been created yet. Open the browser console (F12) for a direct link to create it — it takes about a minute, and only needs doing once.</p>
+           <p style="color:var(--ink-soft);font-size:11.5px;margin-top:4px;font-family:monospace;">${escapeHtml(err.message || "")}</p>`
+        : `<p style="color:var(--ink-soft);font-size:13.5px;">Couldn't load the timeline — check your connection and try reloading the page.</p>`;
     }
   }
 
   timelineLoading = false;
   document.getElementById("timelineLoadingRow").style.display = "none";
-  renderTimeline(timelineSearchQuery);
+  // Skip the normal render on a genuine load error — it would otherwise
+  // immediately overwrite the error message above with a misleading "no
+  // history recorded" message, since an empty timelineEvents array looks
+  // identical whether there's really no history or the query just failed.
+  // This was happening on every single failure since Timeline was built.
+  if (!loadError) renderTimeline(timelineSearchQuery);
 }
 
 function setupTimelineInfiniteScroll() {
@@ -507,7 +532,7 @@ function renderTimeline(query) {
         </div>
         <div class="timeline-content">
           <div class="timeline-title">${highlightMatch(e.action, q)}</div>
-          <div class="timeline-meta">${fmtDate(e.at)}${e.at && e.at.toDate ? " · " + e.at.toDate().toLocaleTimeString("en-IN", { hour: "2-digit", minute: "2-digit" }) : ""} · by ${escapeHtml((e.byEmail || "").split("@")[0])}</div>
+          <div class="timeline-meta">${fmtDate(e.at)}${e.at && e.at.toDate ? " · " + e.at.toDate().toLocaleTimeString("en-IN", { hour: "2-digit", minute: "2-digit" }) : ""} · by ${escapeHtml(emailToName[e.byEmail] || (e.byEmail || "").split("@")[0] || "Someone")}</div>
           ${e.detail ? `<div class="timeline-desc">${highlightMatch(e.detail, q)}</div>` : ""}
         </div>
       </div>`;
