@@ -182,6 +182,20 @@ function buildLoanReceiptBody(ctx) {
     .map((p) => `<tr><td>${fmtDate(p.date)}</td><td style="text-transform:capitalize;">${p.type === "advance_interest" ? "Advance interest" : p.type}</td><td>${fmtMoney(p.amount)}</td></tr>`)
     .join("");
 
+  // Which date(s) the still-outstanding principal has been due since —
+  // shown next to the summary total below. Usually just one date (the
+  // common single-disbursement case); if more than one disbursement is
+  // still outstanding, lists all of them rather than picking just one.
+  const outstandingDates = disbursements
+    .filter((d) => {
+      const live = perDisb.find((p) => p.id === d.id);
+      return (live ? live.principal : d.amount) > 0;
+    })
+    .map((d) => fmtDate(d.date));
+  const outstandingSince = outstandingDates.length
+    ? ` <span style="font-size:12px;color:#666;">(due from ${outstandingDates.join(", ")})</span>`
+    : "";
+
   return `
     <p>Customer: <strong>${escapeHtml(loan.customerName)}</strong>${loan.pledgedByMode === "other" ? ` (item belongs to ${escapeHtml(loan.pledgedByLabel)})` : ""}</p>
     <p>Loan #: <strong>${escapeHtml(loan.loanNumber)}</strong> &nbsp; Loan date: ${fmtDate(loan.date)} &nbsp; Status: ${loan.status}</p>
@@ -200,7 +214,7 @@ function buildLoanReceiptBody(ctx) {
       <tbody>${paymentRows}</tbody>
     </table>` : ""}
     <p class="receipt-total">Amount already paid: ${fmtMoney(totalPaid)}</p>
-    <p class="receipt-total">Principal outstanding: ${fmtMoney(summary.principalOutstanding)}</p>
+    <p class="receipt-total">Principal outstanding: ${fmtMoney(summary.principalOutstanding)}${outstandingSince}</p>
     <p class="receipt-total">Interest due: ${fmtInterestDue(summary.interestOutstanding)}</p>
     <p class="receipt-total">Total payable: ${fmtMoney(summary.totalPayableToday)}</p>`;
 }
