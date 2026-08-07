@@ -204,6 +204,39 @@ The "Payment type" dropdown (interest / partial principal / full closure) is jus
 - ✅ Audit trail — every disbursement, payment, rate change, item release, ready-to-release move, and closure is logged with who did it and when, shown in an "Activity" section on each loan page
 - ✅ Multi-period report comparison (today/month/quarter/half-year/year, current vs previous two) — see Reports above
 
+## CSV Import for Customers (new)
+
+- **"Import CSV" button on the Customers page**, plus a "Download CSV template" link so there's never ambiguity about the expected format (Name, Mobile, Village, Address, Aadhaar, Notes).
+- **Every row is validated before anything is imported** — required fields (matching exactly what the normal Add Customer form requires: name, mobile, village, address) and duplicate mobile numbers (both against customers already in the app, and duplicates within the file itself) are caught and listed with the specific reason, not silently skipped or silently imported broken.
+- **Full preview before committing** — shows exactly how many rows will import and exactly which will be skipped and why, with nothing written to Firestore until you explicitly confirm.
+- Verified directly with mixed-case CSV headers, a row missing a required field, and a duplicate-mobile row — all three correctly caught and reported.
+- New dependency: PapaParse (from cdnjs, verified the exact URL before using it) — necessary here since a naive comma-split parser would silently corrupt any address or notes field that happens to contain a comma.
+
+Touches: `pages/customers.html`, `js/customers.js`.
+
+## App translation — now covers Dashboard, Loans, Customers, New Loan, and Reports (in progress, not yet "full")
+
+**Found and fixed a real, significant bug before adding anything new**: `applyTranslations()` — the function that actually applies `data-i18n` translations to a page — was defined but **never actually called anywhere except the login page**. Nav labels worked because they're built directly with `t()` in JavaScript, not through this mechanism, which is why the gap wasn't obvious. This meant any `data-i18n` attribute added to any other page would have silently done nothing at all. Fixed by calling it from `renderShell()`, which every authenticated page already invokes — one fix, applies everywhere.
+
+**What's actually translated now**: static UI chrome (headings, labels, buttons, placeholders, hints, table headers, filter/dropdown options) on Dashboard, Customers, Loans, New Loan, and Reports — 175 keys total across all 4 languages, verified with an exact key-parity check after every addition (comparing every language's key set against English) to catch anything missing or mistyped before it ships, not after.
+
+**Two pages remain: Loan Detail and Customer Profile.** Loan Detail specifically is large — it has more static content by itself than everything covered so far combined, spread across many modals (payments, disbursements, receipts, signatures, closure, item release, rate changes). Continuing there next, with the same care.
+
+**Still out of scope for all of this, worth restating clearly:** text generated dynamically inside JavaScript (table rows built from data, toasts, error messages) isn't touched by any of this — translating those would need a deeper change to how each page renders its content, not just attributes added to static HTML.
+
+Touches: `js/nav.js` (the real fix), `js/i18n.js` (new keys), `pages/dashboard.html`, `pages/customers.html`, `pages/loans.html`, `pages/loan-create.html`, `pages/reports.html`.
+
+
+
+## Dashboard: Overdue widget + Backup reminder (new)
+
+Two small additions to the Dashboard, both following the exact same conditional-card pattern already used for "Ready to release" and "Funds to return" — hidden entirely when there's nothing to show, no empty/zero-state clutter.
+
+- **Overdue** — active loans with no payment in 90+ days, using the identical definition already established for the "Overdue" filter on the Loans page (not a new, separate definition to keep in sync). Sorted most-overdue-first, shows up to 10 directly with a link to see the rest on Loans. Computed from data the Dashboard was already fetching for its other stats — no additional Firestore reads.
+- **Backup reminder** — nudges toward the Backup page, but deliberately only after it's been genuinely a while: 90+ days since the last backup, or no backup ever taken. Not shown on every visit, which would just become background noise you'd learn to ignore.
+
+Touches: `pages/dashboard.html`, `js/dashboard.js`.
+
 ## Photo Backup & Restore (new)
 
 A separate "Photos" section on the Profile page, alongside the existing data Backup — deliberately kept apart, since photos can add up to real size and time, so downloading them is its own action rather than folded into every routine backup.
