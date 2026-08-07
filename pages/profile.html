@@ -1,0 +1,274 @@
+<!DOCTYPE html>
+<html lang="en">
+<script>(function(){try{var p=localStorage.getItem('gl_theme')||'system';var d=p==='system'?(window.matchMedia&&matchMedia('(prefers-color-scheme: dark)').matches?'dark':'light'):p;document.documentElement.setAttribute('data-theme',d);}catch(e){}})();</script>
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Profile — Gharana</title>
+<link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png">
+<link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png">
+<link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png">
+<link rel="manifest" href="/site.webmanifest">
+<meta name="theme-color" content="#0B2A5B">
+<link rel="preconnect" href="https://www.gstatic.com">
+<link rel="preconnect" href="https://firestore.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../css/style.css">
+</head>
+<body>
+<div id="stagedContent">
+  <div class="card">
+    <h2>My Profile</h2>
+    <div class="divider-dashed"></div>
+    <p class="hint" style="margin-bottom:10px;">Your name is used for the "Good morning" greeting on the dashboard.</p>
+    <div class="field"><label>Full name</label><input type="text" id="profileNameInput" placeholder="e.g. Kavish Shah"></div>
+    <div class="grid grid-2">
+      <div class="field">
+        <label>Deals in</label>
+        <select id="profileBusinessType">
+          <option value="gold">Gold</option>
+          <option value="silver">Silver</option>
+          <option value="both">Gold &amp; Silver</option>
+        </select>
+      </div>
+      <div class="field"><label>Phone (optional)</label><input type="tel" id="profilePhoneInput" placeholder="9876543210"></div>
+    </div>
+    <button class="btn btn-primary" id="saveProfileBtn" onclick="saveMyProfile()">Save profile</button>
+  </div>
+
+  <div class="card" style="margin-top:16px;">
+    <h2>Account</h2>
+    <div class="divider-dashed"></div>
+    <div class="stat" style="margin-bottom:14px;"><div class="label">Signed in as</div><div class="value" style="font-size:16px;" id="profileEmail">—</div></div>
+    <button class="btn btn-secondary" onclick="logout()">Sign out</button>
+  </div>
+
+  <div class="card" style="margin-top:16px;">
+    <h2>Shop details</h2>
+    <div class="divider-dashed"></div>
+    <p style="color:var(--ink-soft);font-size:13.5px;margin-bottom:10px;">Used on generated receipts. Shared across both accounts — one shop, one set of details, so whoever edits this updates it for both of you.</p>
+    <div class="field"><label>Shop name *</label><input type="text" id="shopName" placeholder="e.g. Shah Jewellers"></div>
+    <div class="field"><label>Tagline</label><input type="text" id="shopTagline" placeholder="e.g. Gold &amp; Silver Mortgage Services"></div>
+    <div class="field"><label>Address *</label><input type="text" id="shopAddress" placeholder="e.g. 31 Nehru Marg, Jhabua, M.P. 457661"></div>
+    <div class="field"><label>Phone / WhatsApp number</label><input type="tel" id="shopPhone" placeholder="9876543210"></div>
+    <div class="field">
+      <label>Shop logo</label>
+      <div style="display:flex;align-items:center;gap:14px;">
+        <div id="shopLogoPreview" style="width:64px;height:64px;border-radius:8px;border:1px solid var(--line);background:var(--paper-soft);display:flex;align-items:center;justify-content:center;overflow:hidden;flex-shrink:0;">
+          <span style="color:var(--ink-soft);font-size:11px;">No logo</span>
+        </div>
+        <div>
+          <input type="file" id="shopLogoInput" accept="image/*" style="display:none;" onchange="handleShopLogoSelected(event)">
+          <button type="button" class="btn btn-secondary btn-sm" onclick="document.getElementById('shopLogoInput').click()">📁 Choose image</button>
+          <div class="hint" style="margin-top:4px;">Shown on printed/PDF receipts. PNG with a transparent background works best.</div>
+        </div>
+      </div>
+    </div>
+    <button class="btn btn-primary btn-sm" id="saveShopDetailsBtn" onclick="saveShopDetails()">Save shop details</button>
+  </div>
+
+  <div class="card" style="margin-top:16px;">
+    <h2>Language</h2>
+    <div class="divider-dashed"></div>
+    <p style="color:var(--ink-soft);font-size:13.5px;margin-bottom:10px;">Changes the navigation menu and login screen. Loan forms and reports stay in English for now.</p>
+    <select id="langSelect" style="max-width:280px;"></select>
+  </div>
+
+  <div class="card" style="margin-top:16px;">
+    <h2>Appearance</h2>
+    <div class="divider-dashed"></div>
+    <p style="color:var(--ink-soft);font-size:13.5px;margin-bottom:10px;">Choose how Gharana looks. "System" follows your phone or laptop's own light/dark setting automatically.</p>
+    <div id="themeToggleProfile" style="max-width:280px;"></div>
+  </div>
+
+  <div class="card" style="margin-top:16px;">
+    <h2>💾 Backup</h2>
+    <div class="divider-dashed"></div>
+    <p style="color:var(--ink-soft);font-size:13.5px;margin-bottom:10px;">
+      Downloads every customer, loan, ornament, disbursement, payment, surplus deposit, gallery photo reference, and activity log entry — into a single file you can keep somewhere safe (your computer, a USB drive, cloud storage). If this device is ever lost, stolen, or reset, a backup lets you restore everything on a new one. This covers your records — for the actual photo images themselves, see "Photos" below.
+    </p>
+    <p class="hint" id="lastBackupLabel" style="margin-bottom:10px;">Last backup: checking…</p>
+    <button class="btn btn-primary" id="downloadBackupBtn" onclick="downloadBackup()">⬇ Download backup</button>
+  </div>
+
+  <div class="card" style="margin-top:16px;">
+    <h2>🖼️ Photos</h2>
+    <div class="divider-dashed"></div>
+    <p style="color:var(--ink-soft);font-size:13.5px;margin-bottom:10px;">
+      Downloads every customer photo, loan photo, disbursement photo, return photo, and gallery photo as a single ZIP file, organized into a folder per customer. This is separate from the backup above — photos can add up to a lot of data, so this is its own deliberate action rather than bundled into every regular backup.
+    </p>
+    <p class="hint" id="lastPhotoBackupLabel" style="margin-bottom:10px;">Last photo backup: checking…</p>
+    <button class="btn btn-primary" id="downloadPhotosBtn" onclick="downloadPhotos()">⬇ Download all photos</button>
+  </div>
+
+  <div class="card" style="margin-top:16px;border-color:var(--danger);">
+    <h2 style="color:var(--danger);">⚠ Danger zone</h2>
+    <div class="divider-dashed"></div>
+    <p style="color:var(--ink-soft);font-size:13.5px;margin-bottom:12px;">
+      This permanently deletes every customer, loan, ornament, disbursement, payment, activity log entry, saved draft, and photo in the app. Your and your father's login accounts are not affected — you'll still be able to sign in with the same email and password afterward, into a completely empty app.
+    </p>
+    <button class="btn btn-danger" onclick="startReset()">Reset whole panel</button>
+
+    <div class="divider-dashed" style="margin-top:18px;"></div>
+    <h3 style="font-size:15px;margin-bottom:8px;">Restore from backup</h3>
+    <p style="color:var(--ink-soft);font-size:13.5px;margin-bottom:12px;">
+      Replaces everything currently in the app with the contents of a backup file. <strong>Only works when the app is completely empty</strong> — if you have any live customers or loans right now, this is blocked, to prevent accidentally overwriting real data with an old backup. If you need to restore onto an account that still has data, reset the panel first (above), then restore.
+    </p>
+    <input type="file" id="restoreFileInput" accept=".json" style="display:none;" onchange="handleRestoreFileSelected(event)">
+    <button class="btn btn-danger" onclick="document.getElementById('restoreFileInput').click()">📂 Choose backup file to restore</button>
+
+    <div class="divider-dashed" style="margin-top:18px;"></div>
+    <h3 style="font-size:15px;margin-bottom:8px;">Restore photos</h3>
+    <p style="color:var(--ink-soft);font-size:13.5px;margin-bottom:12px;">
+      Restores photos from a "Download all photos" ZIP, uploading each one back to storage and reconnecting it to its original customer, loan, disbursement, or gallery entry automatically. Works the same way as restoring data above — <strong>only allowed when the app is completely empty</strong>, and you'll normally restore data first, then photos, onto the same freshly-restored records.
+    </p>
+    <input type="file" id="restorePhotosFileInput" accept=".zip" style="display:none;" onchange="handleRestorePhotosFileSelected(event)">
+    <button class="btn btn-danger" onclick="document.getElementById('restorePhotosFileInput').click()">📂 Choose photos ZIP to restore</button>
+  </div>
+</div>
+
+<!-- Step 1 & Step 3: Authentication Modal -->
+<div class="modal-overlay" id="authModal" style="display:none;">
+  <div class="modal">
+    <h2 id="authModalTitle">Confirm your login</h2>
+    <p style="color:var(--ink-soft);font-size:13.5px;">Enter your email and password to continue.</p>
+    <div class="field"><label>Email</label><input type="email" id="authEmail"></div>
+    <div class="field"><label>Password</label><input type="password" id="authPassword"></div>
+    <p id="authError" style="color:var(--danger);font-size:13px;display:none;"></p>
+    <div style="display:flex;gap:10px;">
+      <button type="button" class="btn btn-secondary btn-block" onclick="cancelReset()">Cancel</button>
+      <button type="button" class="btn btn-danger btn-block" id="authConfirmBtn" onclick="handleAuthSubmit()">Confirm</button>
+    </div>
+  </div>
+</div>
+
+<!-- Step 2: Countdown Confirmation Modal -->
+<div class="modal-overlay" id="countdownModal" style="display:none;">
+  <div class="modal">
+    <h2 style="color:var(--danger);">⚠ This will delete everything</h2>
+    <p style="background:var(--danger-soft);color:var(--danger);padding:12px 14px;border-radius:8px;font-size:14px;font-weight:600;margin-bottom:14px;">
+      All customers, loans, ornaments, disbursements, payments, activity logs, drafts, and photos will be permanently deleted. This cannot be undone. Your login will stay the same.
+    </p>
+    <p style="text-align:center;font-size:13px;color:var(--ink-soft);margin-bottom:6px;">Please wait before you can proceed</p>
+    <p style="text-align:center;font-size:40px;font-weight:700;font-family:var(--font-mono);margin-bottom:14px;" id="countdownNumber">10</p>
+    <div style="display:flex;gap:10px;">
+      <button type="button" class="btn btn-secondary btn-block" onclick="cancelReset()">Cancel</button>
+      <button type="button" class="btn btn-danger btn-block" id="countdownConfirmBtn" onclick="proceedToSecondAuth()" disabled>Wait…</button>
+    </div>
+  </div>
+</div>
+
+<!-- Restore: file validated, preview before confirming -->
+<div class="modal-overlay" id="restorePreviewModal" style="display:none;">
+  <div class="modal">
+    <h2>Restore this backup?</h2>
+    <div id="restorePreviewBody" style="background:var(--paper-soft);border-radius:8px;padding:14px;margin-bottom:14px;font-size:13.5px;"></div>
+    <p style="background:var(--danger-soft);color:var(--danger);padding:12px 14px;border-radius:8px;font-size:13.5px;font-weight:600;margin-bottom:14px;">
+      This will replace everything currently in the app with the contents of this file. This cannot be undone.
+    </p>
+    <div style="display:flex;gap:10px;">
+      <button type="button" class="btn btn-secondary btn-block" onclick="cancelRestoreConfirm()">Cancel</button>
+      <button type="button" class="btn btn-danger btn-block" onclick="startRestoreConfirm()">Continue</button>
+    </div>
+  </div>
+</div>
+
+<!-- Restore: step 1 of 2 auth -->
+<div class="modal-overlay" id="restoreAuthModal" style="display:none;">
+  <div class="modal">
+    <h2 id="restoreAuthModalTitle">Confirm your login</h2>
+    <p style="color:var(--ink-soft);font-size:13.5px;">Enter your email and password to continue.</p>
+    <div class="field"><label>Email</label><input type="email" id="restoreAuthEmail"></div>
+    <div class="field"><label>Password</label><input type="password" id="restoreAuthPassword"></div>
+    <p id="restoreAuthError" style="color:var(--danger);font-size:13px;display:none;"></p>
+    <div style="display:flex;gap:10px;">
+      <button type="button" class="btn btn-secondary btn-block" onclick="cancelRestoreConfirm()">Cancel</button>
+      <button type="button" class="btn btn-danger btn-block" id="restoreAuthConfirmBtn" onclick="handleRestoreAuthSubmit()">Confirm</button>
+    </div>
+  </div>
+</div>
+
+<!-- Restore: step 2 of 2 countdown -->
+<div class="modal-overlay" id="restoreCountdownModal" style="display:none;">
+  <div class="modal">
+    <h2 style="color:var(--danger);">⚠ This will overwrite the app's data</h2>
+    <p style="background:var(--danger-soft);color:var(--danger);padding:12px 14px;border-radius:8px;font-size:14px;font-weight:600;margin-bottom:14px;">
+      Everything in this backup file will be written into the app. This cannot be undone.
+    </p>
+    <p style="text-align:center;font-size:13px;color:var(--ink-soft);margin-bottom:6px;">Please wait before you can proceed</p>
+    <p style="text-align:center;font-size:40px;font-weight:700;font-family:var(--font-mono);margin-bottom:14px;" id="restoreCountdownNumber">10</p>
+    <div style="display:flex;gap:10px;">
+      <button type="button" class="btn btn-secondary btn-block" onclick="cancelRestoreConfirm()">Cancel</button>
+      <button type="button" class="btn btn-danger btn-block" id="restoreCountdownConfirmBtn" onclick="proceedToRestoreSecondAuth()" disabled>Wait…</button>
+    </div>
+  </div>
+</div>
+
+<!-- Restore Photos: preview before confirming -->
+<div class="modal-overlay" id="restorePhotosPreviewModal" style="display:none;">
+  <div class="modal">
+    <h2>Restore these photos?</h2>
+    <div id="restorePhotosPreviewBody" style="background:var(--paper-soft);border-radius:8px;padding:14px;margin-bottom:14px;font-size:13.5px;"></div>
+    <p style="background:var(--danger-soft);color:var(--danger);padding:12px 14px;border-radius:8px;font-size:13.5px;font-weight:600;margin-bottom:14px;">
+      Each photo will be uploaded and reconnected to its original customer, loan, disbursement, or gallery entry. This cannot be undone.
+    </p>
+    <div style="display:flex;gap:10px;">
+      <button type="button" class="btn btn-secondary btn-block" onclick="cancelRestorePhotosConfirm()">Cancel</button>
+      <button type="button" class="btn btn-danger btn-block" onclick="startRestorePhotosConfirm()">Continue</button>
+    </div>
+  </div>
+</div>
+
+<!-- Restore Photos: step 1 of 2 auth -->
+<div class="modal-overlay" id="restorePhotosAuthModal" style="display:none;">
+  <div class="modal">
+    <h2 id="restorePhotosAuthModalTitle">Confirm your login</h2>
+    <p style="color:var(--ink-soft);font-size:13.5px;">Enter your email and password to continue.</p>
+    <div class="field"><label>Email</label><input type="email" id="restorePhotosAuthEmail"></div>
+    <div class="field"><label>Password</label><input type="password" id="restorePhotosAuthPassword"></div>
+    <p id="restorePhotosAuthError" style="color:var(--danger);font-size:13px;display:none;"></p>
+    <div style="display:flex;gap:10px;">
+      <button type="button" class="btn btn-secondary btn-block" onclick="cancelRestorePhotosConfirm()">Cancel</button>
+      <button type="button" class="btn btn-danger btn-block" id="restorePhotosAuthConfirmBtn" onclick="handleRestorePhotosAuthSubmit()">Confirm</button>
+    </div>
+  </div>
+</div>
+
+<!-- Restore Photos: step 2 of 2 countdown -->
+<div class="modal-overlay" id="restorePhotosCountdownModal" style="display:none;">
+  <div class="modal">
+    <h2 style="color:var(--danger);">⚠ This will upload and reconnect photos</h2>
+    <p style="background:var(--danger-soft);color:var(--danger);padding:12px 14px;border-radius:8px;font-size:14px;font-weight:600;margin-bottom:14px;">
+      Every photo in this file will be uploaded and reconnected to its original record. This cannot be undone.
+    </p>
+    <p style="text-align:center;font-size:13px;color:var(--ink-soft);margin-bottom:6px;">Please wait before you can proceed</p>
+    <p style="text-align:center;font-size:40px;font-weight:700;font-family:var(--font-mono);margin-bottom:14px;" id="restorePhotosCountdownNumber">10</p>
+    <div style="display:flex;gap:10px;">
+      <button type="button" class="btn btn-secondary btn-block" onclick="cancelRestorePhotosConfirm()">Cancel</button>
+      <button type="button" class="btn btn-danger btn-block" id="restorePhotosCountdownConfirmBtn" onclick="proceedToRestorePhotosSecondAuth()" disabled>Wait…</button>
+    </div>
+  </div>
+</div>
+
+<!-- Restore Photos: progress -->
+<div class="modal-overlay" id="restorePhotosProgressModal" style="display:none;">
+  <div class="modal">
+    <h2>Restoring photos…</h2>
+    <p class="hint" id="restorePhotosProgressText" style="margin-bottom:10px;">Starting…</p>
+    <p style="color:var(--ink-soft);font-size:12.5px;">Please don't close this page until this finishes.</p>
+  </div>
+</div>
+
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-storage-compat.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+<script src="../js/firebase-config.js"></script>
+<script src="../js/auth.js"></script>
+<script src="../js/i18n.js"></script>
+<script src="../js/nav.js"></script>
+<script src="../js/theme.js"></script>
+<script src="../js/profile.js"></script>
+</body>
+</html>
