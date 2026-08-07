@@ -651,9 +651,26 @@ function t(key) {
 }
 
 // Applies translations to any element carrying data-i18n="key" in the DOM.
+// Careful about elements that have nested child elements (e.g. a count
+// badge inside a translated button) — setting .textContent directly would
+// wipe those children out entirely, which is exactly what was happening
+// here before this fix (a badge span disappearing, then later code
+// crashing trying to update an element that no longer existed). Only the
+// element's own direct text is replaced; any nested elements are left
+// completely alone.
 function applyTranslations(root) {
   (root || document).querySelectorAll("[data-i18n]").forEach((el) => {
-    el.textContent = t(el.getAttribute("data-i18n"));
+    const translated = t(el.getAttribute("data-i18n"));
+    if (el.children.length === 0) {
+      el.textContent = translated;
+    } else {
+      const textNode = [...el.childNodes].find((n) => n.nodeType === 3);
+      if (textNode) {
+        textNode.textContent = translated;
+      } else {
+        el.insertBefore(document.createTextNode(translated), el.firstChild);
+      }
+    }
   });
   (root || document).querySelectorAll("[data-i18n-placeholder]").forEach((el) => {
     el.setAttribute("placeholder", t(el.getAttribute("data-i18n-placeholder")));
