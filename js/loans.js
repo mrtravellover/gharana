@@ -53,8 +53,13 @@ requireAuth(async () => {
 ============================================================ */
 
 async function loadCustomerMap() {
-  const custSnap = await db.collection("customers").get();
-  custSnap.docs.forEach((d) => { customerMap[d.id] = d.data(); });
+  try {
+    const custSnap = await db.collection("customers").get();
+    custSnap.docs.forEach((d) => { customerMap[d.id] = d.data(); });
+  } catch (err) {
+    console.error("Loans: couldn't load customer map (village/mobile columns will be blank until this succeeds):", err);
+    toast("Couldn't load customer details — loans will still show, but village/mobile may be missing. Try reloading.");
+  }
 }
 
 async function ensureStatusLoaded(status) {
@@ -69,9 +74,22 @@ async function ensureStatusLoaded(status) {
   try {
     for (const s of newStatuses) {
       const snap = await db.collection("loans").where("status", "==", s).get();
-      const loaded = await Promise.all(snap.docs.map((doc) => buildLoanRecord(doc)));
-      allLoans.push(...loaded);
+      const results = await Promise.allSettled(snap.docs.map((doc) => buildLoanRecord(doc)));
+      const succeeded = [];
+      let failedCount = 0;
+      results.forEach((r, i) => {
+        if (r.status === "fulfilled") {
+          succeeded.push(r.value);
+        } else {
+          failedCount++;
+          console.error(`Loans: couldn't load loan ${snap.docs[i].id} (status "${s}") — skipped, others will still show:`, r.reason);
+        }
+      });
+      allLoans.push(...succeeded);
       loadedStatuses.add(s);
+      if (failedCount > 0) {
+        toast(`${failedCount} loan(s) couldn't be loaded and were skipped — check the console for details. The rest loaded normally.`);
+      }
     }
   } catch (err) {
     console.error("Loans: failed to load status", newStatuses, err);
