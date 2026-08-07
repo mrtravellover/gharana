@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+<html lang="en">
+<script>(function(){try{var p=localStorage.getItem('gl_theme')||'system';var d=p==='system'?(window.matchMedia&&matchMedia('(prefers-color-scheme: dark)').matches?'dark':'light'):p;document.documentElement.setAttribute('data-theme',d);}catch(e){}})();</script>
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Loans — Gharana</title>
+<link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png">
+<link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png">
+<link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png">
+<link rel="manifest" href="/site.webmanifest">
+<meta name="theme-color" content="#0B2A5B">
+<link rel="preconnect" href="https://www.gstatic.com">
+<link rel="preconnect" href="https://firestore.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../css/style.css">
+</head>
+<body>
+<div id="stagedContent">
+  <div class="tabs" id="statusTabs">
+    <button data-status="active" class="active" data-i18n="status_active">Active</button>
+    <button data-status="released" data-i18n="dash_ready_to_release">Ready to release</button>
+    <button data-status="closed" data-i18n="status_closed">Closed</button>
+    <button data-status="all" data-i18n="status_all">All</button>
+  </div>
+  <div class="usearch-bar">
+    <svg class="usearch-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/></svg>
+    <input type="text" id="searchInput" data-i18n-placeholder="loans_search_ph" placeholder="Search loan #, receipt #, customer, mobile, village, item, amount, status…">
+    <button class="usearch-clear" id="searchClearBtn" title="Clear search" aria-label="Clear search" style="display:none;">✕</button>
+    <button class="btn btn-secondary btn-sm" id="filtersToggleBtn" onclick="toggleFiltersPanel()" data-i18n="loans_filters">⚙ Filters<span id="filtersActiveCount"></span></button>
+  </div>
+  <div class="usearch-meta">
+    <span id="searchResultCount" class="hint"></span>
+    <div style="display:flex;gap:10px;">
+      <button class="btn btn-secondary" onclick="exportLoansCsv(this)" data-i18n="loans_export_csv">⬇ Export CSV</button>
+      <a href="loan-create.html" class="btn btn-primary" data-i18n="loans_new">+ New loan</a>
+    </div>
+  </div>
+
+  <div class="card usearch-filters-panel" id="filtersPanel" style="display:none;">
+    <div class="grid grid-3">
+      <div class="field">
+        <label data-i18n="loans_filter_village">Village / Address</label>
+        <input type="text" id="filterVillage" placeholder="e.g. Jhabua">
+      </div>
+      <div class="field">
+        <label data-i18n="loans_filter_amount">Loan amount (₹)</label>
+        <div style="display:flex;gap:8px;">
+          <input type="number" id="filterAmountMin" placeholder="Min">
+          <input type="number" id="filterAmountMax" placeholder="Max">
+        </div>
+      </div>
+      <div class="field">
+        <label data-i18n="loans_filter_weight">Gold/silver weight (g)</label>
+        <div style="display:flex;gap:8px;">
+          <input type="number" id="filterWeightMin" placeholder="Min">
+          <input type="number" id="filterWeightMax" placeholder="Max">
+        </div>
+      </div>
+      <div class="field">
+        <label data-i18n="loans_filter_date_from">Loan date from</label>
+        <input type="date" id="filterDateFrom">
+      </div>
+      <div class="field">
+        <label data-i18n="loans_filter_date_to">Loan date to</label>
+        <input type="date" id="filterDateTo">
+      </div>
+      <div class="field">
+        <label data-i18n="loans_filter_special">Special</label>
+        <select id="filterSpecial">
+          <option value="" data-i18n="loans_filter_none">— None —</option>
+          <option value="today" data-i18n="loans_filter_today">Today's loans</option>
+          <option value="overdue" data-i18n="loans_filter_overdue">Overdue (active, no payment in 90+ days)</option>
+          <option value="renewals" data-i18n="loans_filter_renewals">Renewals (topped up more than once)</option>
+        </select>
+      </div>
+    </div>
+    <div style="display:flex;gap:10px;">
+      <button type="button" class="btn btn-secondary" onclick="clearFilters()" data-i18n="loans_clear_filters">Clear filters</button>
+    </div>
+  </div>
+
+  <div class="card" style="padding:0;overflow:hidden;">
+    <table>
+      <thead id="loansTableHead"><tr><th>Loan #</th><th>Customer</th><th>Pledged by</th><th>Date</th><th>Principal</th><th>Interest due</th><th>Status</th></tr></thead>
+      <tbody id="loanBody"><tr><td colspan="7" style="color:var(--ink-soft);padding:20px 0;">Loading…</td></tr></tbody>
+    </table>
+  </div>
+</div>
+
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-storage-compat.js"></script>
+<script src="../js/firebase-config.js"></script>
+<script src="../js/auth.js"></script>
+<script src="../js/i18n.js"></script>
+<script src="../js/nav.js"></script>
+<script src="../js/theme.js"></script>
+<script src="../js/interest.js"></script>
+<script src="../js/search.js"></script>
+<script src="../js/loans.js"></script>
+<script src="../js/owl-nlu/numberParser.js"></script>
+<script src="../js/owl-nlu/dateParser.js"></script>
+<script src="../js/owl-nlu/entityExtractor.js"></script>
+<script src="../js/owl-nlu/conversationMemory.js"></script>
+<script src="../js/owl-nlu/intentParser.js"></script>
+<script src="../js/owl-nlu/interestCalculator.js"></script>
+<script src="../js/owl-nlu/responseGenerator.js"></script>
+<script src="../js/owl-assistant.js"></script>
+</body>
+</html>
